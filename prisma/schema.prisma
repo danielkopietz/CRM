@@ -21,13 +21,45 @@ enum DealStatus {
   PROBLEM_ROT
 }
 
+enum DocumentStatus {
+  FEHLT
+  ANGEFRAGT
+  ERHALTEN
+  GEPRUEFT
+  NICHT_NOETIG
+}
+
+enum WaitTarget {
+  INTERN
+  LIEFERANT
+  SPEDITION
+  KUNDE
+  ZOLL
+  KEIN_BLOCKER
+}
+
+enum DealPriority {
+  NIEDRIG
+  NORMAL
+  HOCH
+  KRITISCH
+}
+
+enum RiskStatus {
+  NIEDRIG
+  MITTEL
+  HOCH
+}
+
 model Deal {
-  id                 String     @id @default(cuid())
+  id                 String         @id @default(cuid())
   kunde              String
   marke              String?
   artikel            String
   stueckzahl         String?
   preis              String?
+  warenwert          String?
+  marge              String?
   dealnummer         String?
   liefertermin       String?
   po                 String?
@@ -39,18 +71,41 @@ model Deal {
   etd                DateTime?
   eta                DateTime?
   crdZeitfenster     String?
-  status             DealStatus @default(NEU)
+  status             DealStatus     @default(NEU)
+  priority           DealPriority   @default(NORMAL)
+  riskStatus         RiskStatus     @default(NIEDRIG)
+  wartetAuf          WaitTarget     @default(KEIN_BLOCKER)
   naechsterSchritt   String?
   bearbeitenBis      DateTime?
+  lieferant          String?
+  lieferantKontakt   String?
+  spedition          String?
+  speditionKontakt   String?
+  incoterm           String?
+  pol                String?
+  pod                String?
+  containerNummer    String?
+  blNummer           String?
+  zahlungsstatus     String?
+  commercialInvoice  DocumentStatus @default(FEHLT)
+  packingList        DocumentStatus @default(FEHLT)
+  billOfLading       DocumentStatus @default(FEHLT)
+  ursprungsnachweis  DocumentStatus @default(FEHLT)
+  hsCode             DocumentStatus @default(FEHLT)
+  ceDokumente        DocumentStatus @default(NICHT_NOETIG)
+  pruefberichte      DocumentStatus @default(NICHT_NOETIG)
   notizenKurz        String?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
   notes              DealNote[]
+  changes            DealChange[]
 
   @@index([kunde])
   @@index([status])
   @@index([eta])
   @@index([bearbeitenBis])
+  @@index([priority])
+  @@index([wartetAuf])
 }
 
 model DealNote {
@@ -61,4 +116,18 @@ model DealNote {
   deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
   @@index([dealId])
+}
+
+model DealChange {
+  id        String   @id @default(cuid())
+  dealId    String
+  field     String
+  oldValue  String?
+  newValue  String?
+  changedBy String?
+  createdAt DateTime @default(now())
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+  @@index([createdAt])
 }

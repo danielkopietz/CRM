@@ -11,6 +11,11 @@ Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsproz
 - Status: Neu, In Klaerung, PO offen, Muster offen, Produktion, Verschifft, Verzollung vorbereiten, Beim Zoll, Freigegeben, Abgeschlossen, Problem / Rot
 - Ampel: Gruen, Gelb, Rot
 - Verlauf/Notizen pro Deal
+- Reiter fuer Uebersicht, Kalender und Deals
+- Einkauf-KPIs: Heute faellig, ETA/ETD diese Woche, Blocker und Dokumentenluecken
+- Lieferant, Spedition, Incoterm, POL/POD, Container, BL/AWB und Zahlungsstatus
+- Dokumentenstatus fuer Commercial Invoice, Packing List, BL/AWB, Ursprung, HS Code, CE und Pruefberichte
+- Automatische Aenderungshistorie fuer Menge, Preis, ETD und ETA
 - Dockerfile fuer Coolify
 
 ## Ampelregeln
@@ -18,6 +23,15 @@ Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsproz
 - Gruen: Deal ist nicht kritisch
 - Gelb: `Bearbeiten bis` ist heute oder morgen
 - Rot: ETA ist heute/ueberschritten, `Bearbeiten bis` ist ueberfaellig oder Status ist `Problem / Rot`
+
+## Einkaufssicht
+
+Die Uebersicht ist als Arbeitsliste fuer internationale Einkaeufer aufgebaut:
+
+- Kritische Deals werden zuerst angezeigt
+- Blocker zeigen, ob intern, Lieferant, Spedition, Kunde oder Zoll am Zug ist
+- Kalender zeigt ETD, ETA und interne Bearbeitungsfristen
+- Risikoampel beruecksichtigt manuelles Risiko und fehlende Dokumente
 
 ## Lokale Entwicklung
 
