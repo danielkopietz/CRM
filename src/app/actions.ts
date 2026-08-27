@@ -22,6 +22,18 @@ function optionalDate(formData: FormData, key: string) {
   return value ? new Date(`${value}T00:00:00`) : null;
 }
 
+function checkbox(formData: FormData, key: string) {
+  return formData.get(key) === "on";
+}
+
+function requireText(formData: FormData, key: string, label: string) {
+  const value = optionalText(formData, key);
+  if (!value) {
+    throw new Error(`${label} ist ein Pflichtfeld.`);
+  }
+  return value;
+}
+
 function selectValue<T extends string>(formData: FormData, key: string, fallback: T) {
   return String(formData.get(key) ?? fallback) as T;
 }
@@ -29,36 +41,53 @@ function selectValue<T extends string>(formData: FormData, key: string, fallback
 function dealPayload(formData: FormData) {
   const kunde = optionalText(formData, "kunde");
   const artikel = optionalText(formData, "artikel");
+  const etd = optionalDate(formData, "etd");
+  const etaUnbekannt = checkbox(formData, "etaUnbekannt");
+  const eta = etaUnbekannt ? null : optionalDate(formData, "eta");
+  const bearbeitenBis = optionalDate(formData, "bearbeitenBis");
 
   if (!kunde || !artikel) {
     throw new Error("Kunde und Artikel sind Pflichtfelder.");
+  }
+
+  if (!eta && !etaUnbekannt) {
+    throw new Error("ETA ist ein Pflichtfeld oder muss bewusst als unbekannt markiert werden.");
+  }
+
+  if (!etd) {
+    throw new Error("ETD ist ein Pflichtfeld.");
+  }
+
+  if (!bearbeitenBis) {
+    throw new Error("Bearbeiten bis ist ein Pflichtfeld.");
   }
 
   return {
     kunde,
     artikel,
     marke: optionalText(formData, "marke"),
-    stueckzahl: optionalText(formData, "stueckzahl"),
+    stueckzahl: requireText(formData, "stueckzahl", "Stückzahl"),
     preis: optionalText(formData, "preis"),
     warenwert: optionalText(formData, "warenwert"),
     marge: optionalText(formData, "marge"),
     dealnummer: optionalText(formData, "dealnummer"),
     liefertermin: optionalText(formData, "liefertermin"),
-    po: optionalText(formData, "po"),
+    po: requireText(formData, "po", "PO"),
     drittlandswarePo: optionalText(formData, "drittlandswarePo"),
     drittlaender: optionalText(formData, "drittlaender"),
     fotomusterPo: optionalText(formData, "fotomusterPo"),
     qsMusterPo: optionalText(formData, "qsMusterPo"),
     servicewarePo: optionalText(formData, "servicewarePo"),
-    etd: optionalDate(formData, "etd"),
-    eta: optionalDate(formData, "eta"),
+    etd,
+    eta,
+    etaUnbekannt,
     crdZeitfenster: optionalText(formData, "crdZeitfenster"),
     status: selectValue<DealStatus>(formData, "status", "NEU"),
     priority: selectValue<DealPriority>(formData, "priority", "NORMAL"),
     riskStatus: selectValue<RiskStatus>(formData, "riskStatus", "NIEDRIG"),
     wartetAuf: selectValue<WaitTarget>(formData, "wartetAuf", "KEIN_BLOCKER"),
-    naechsterSchritt: optionalText(formData, "naechsterSchritt"),
-    bearbeitenBis: optionalDate(formData, "bearbeitenBis"),
+    naechsterSchritt: requireText(formData, "naechsterSchritt", "Nächster Schritt"),
+    bearbeitenBis,
     lieferant: optionalText(formData, "lieferant"),
     lieferantKontakt: optionalText(formData, "lieferantKontakt"),
     spedition: optionalText(formData, "spedition"),
@@ -142,8 +171,76 @@ export async function addNote(dealId: string, formData: FormData) {
   revalidatePath("/");
 }
 
+export async function quickUpdateDeal(id: string, formData: FormData) {
+  await requireUser();
+  const type = optionalText(formData, "quickAction");
+  const user = await getSessionUser();
+  const previous = await prisma.deal.findUnique({ where: { id } });
+  if (!previous || !type) return;
+
+  if (type === "eta") {
+    const etaUnbekannt = checkbox(formData, "etaUnbekannt");
+    const eta = etaUnbekannt ? null : optionalDate(formData, "eta");
+    await prisma.deal.update({ where: { id }, data: { eta, etaUnbekannt } });
+    await trackSingleChange(id, "ETA", previous.eta, eta, user?.email ?? null);
+  }
+
+  if (type === "nextStep") {
+    await prisma.deal.update({
+      where: { id },
+      data: {
+        naechsterSchritt: optionalText(formData, "naechsterSchritt"),
+        bearbeitenBis: optionalDate(formData, "bearbeitenBis"),
+      },
+    });
+  }
+
+  if (type === "waitTarget") {
+    await prisma.deal.update({
+      where: { id },
+      data: { wartetAuf: selectValue<WaitTarget>(formData, "wartetAuf", "KEIN_BLOCKER") },
+    });
+  }
+
+  if (type === "done") {
+    await prisma.deal.update({
+      where: { id },
+      data: {
+        status: "ABGESCHLOSSEN",
+        wartetAuf: "KEIN_BLOCKER",
+        naechsterSchritt: null,
+        bearbeitenBis: null,
+      },
+    });
+  }
+
+  revalidatePath("/");
+}
+
 function stringifyChangeValue(value: string | Date | null | undefined) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   return value;
+}
+
+async function trackSingleChange(
+  dealId: string,
+  field: string,
+  oldValue: string | Date | null | undefined,
+  newValue: string | Date | null | undefined,
+  changedBy: string | null,
+) {
+  const oldText = stringifyChangeValue(oldValue);
+  const newText = stringifyChangeValue(newValue);
+  if (oldText === newText) return;
+
+  await prisma.dealChange.create({
+    data: {
+      dealId,
+      field,
+      oldValue: oldText,
+      newValue: newText,
+      changedBy,
+    },
+  });
 }

@@ -32,6 +32,9 @@ Die Uebersicht ist als Arbeitsliste fuer internationale Einkaeufer aufgebaut:
 - Blocker zeigen, ob intern, Lieferant, Spedition, Kunde oder Zoll am Zug ist
 - Kalender zeigt ETD, ETA und interne Bearbeitungsfristen
 - Risikoampel beruecksichtigt manuelles Risiko und fehlende Dokumente
+- Pflichtfelder schuetzen vor unvollstaendigen Deals: Kunde, Artikel, Menge, PO, ETD, ETA oder bewusst unbekannt, Bearbeiten bis, naechster Schritt
+- Quick Actions direkt an der Deal-Zeile fuer ETA, naechsten Schritt, Wartet-auf und Abschluss
+- Dezente Reminder-Box unten links fuer Deals, die Aufmerksamkeit brauchen
 
 ## Lokale Entwicklung
 

@@ -24,3 +24,19 @@ select,
 textarea {
   font: inherit;
 }
+
+@keyframes crm-soft-pulse {
+  0% {
+    box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.25);
+  }
+  50% {
+    box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.7);
+  }
+  100% {
+    box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.25);
+  }
+}
+
+.crm-soft-pulse {
+  animation: crm-soft-pulse 2.8s ease-in-out infinite;
+}

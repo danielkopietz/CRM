@@ -1,7 +1,9 @@
 import { Deal, DealChange, DealNote } from "@prisma/client";
 import {
   AlertTriangle,
+  BellRing,
   CalendarClock,
+  CheckCircle2,
   CirclePlus,
   ClipboardList,
   FileCheck2,
@@ -19,7 +21,7 @@ import {
 import Link from "next/link";
 import { Fragment } from "react";
 import clsx from "clsx";
-import { addNote, createDeal, deleteDeal, updateDeal } from "@/app/actions";
+import { addNote, createDeal, deleteDeal, quickUpdateDeal, updateDeal } from "@/app/actions";
 import {
   daysUntil,
   dealStatuses,
@@ -101,7 +103,11 @@ export default async function Home({
   const etdWeek = deals.filter((deal) => isWithinDays(deal.etd, 7));
   const dueToday = deals.filter((deal) => daysUntil(deal.bearbeitenBis) === 0);
   const blocked = deals.filter((deal) => deal.wartetAuf !== "KEIN_BLOCKER");
-  const missingEta = deals.filter((deal) => !deal.eta);
+  const missingEta = deals.filter((deal) => !deal.eta && !deal.etaUnbekannt);
+  const reminderDeals = criticalDeals.filter((deal) => {
+    const light = getTrafficLight(deal);
+    return light === "red" || daysUntil(deal.bearbeitenBis) === 0 || (!deal.eta && !deal.etaUnbekannt);
+  });
 
   return (
     <main className="min-h-screen bg-[#f4f6f8] text-[#17202c]">
@@ -174,6 +180,7 @@ export default async function Home({
           />
         )}
       </div>
+      <ReminderPopup deals={reminderDeals} />
     </main>
   );
 }
@@ -412,7 +419,13 @@ function CompactDealTable({
             const risk = getRiskLight(deal);
             return (
               <Fragment key={deal.id}>
-                <tr key={`${deal.id}-summary`} className="align-top hover:bg-[#fafbfc]">
+                <tr
+                  key={`${deal.id}-summary`}
+                  className={clsx(
+                    "align-top hover:bg-[#fafbfc]",
+                    light !== "green" && "crm-soft-pulse",
+                  )}
+                >
                   <td className="px-3 py-4">
                     <span className={clsx("inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold", badgeClass(light))}>
                       <span className={clsx("h-2 w-2 rounded-full", lightDot(light))} />
@@ -433,7 +446,7 @@ function CompactDealTable({
                   </td>
                   <td className="px-3 py-4">{formatDate(deal.etd) || "-"}</td>
                   <td className="px-3 py-4">
-                    <p>{formatDate(deal.eta) || "ETA fehlt"}</p>
+                    <p>{formatDate(deal.eta) || (deal.etaUnbekannt ? "bewusst offen" : "ETA fehlt")}</p>
                     <p className="text-xs text-[#637389]">{relativeDate(deal.eta)}</p>
                   </td>
                   <td className="px-3 py-4">
@@ -451,7 +464,7 @@ function CompactDealTable({
                   </td>
                   <td className="px-3 py-4">
                     {showDetails ? (
-                      <span className="text-sm font-medium text-[#637389]">Details unten</span>
+                      <span className="text-sm font-medium text-[#637389]">Quick Actions unten</span>
                     ) : (
                       <Link href="/?tab=deals" className="font-semibold text-[#244ac8]">
                         Öffnen
@@ -460,8 +473,15 @@ function CompactDealTable({
                   </td>
                 </tr>
                 {showDetails ? (
-                  <tr key={`${deal.id}-details`} className="bg-white">
+                  <tr key={`${deal.id}-quick-actions`} className="bg-white">
                     <td colSpan={10} className="px-3 pb-4">
+                      <QuickActionBar deal={deal} />
+                    </td>
+                  </tr>
+                ) : null}
+                {showDetails ? (
+                  <tr key={`${deal.id}-details`} className="bg-white">
+                    <td colSpan={10} className="px-3 pb-5">
                       <DealDetails deal={deal} />
                     </td>
                   </tr>
@@ -501,9 +521,91 @@ function DealDetails({ deal }: { deal: DealWithRelations }) {
   );
 }
 
+function QuickActionBar({ deal }: { deal: DealWithRelations }) {
+  return (
+    <div className="rounded-md border border-[#dfe5ec] bg-[#f8fafc] p-3">
+      <div className="grid gap-3 xl:grid-cols-[1fr_1.4fr_1fr_auto]">
+        <form action={quickUpdateDeal.bind(null, deal.id)} className="flex flex-wrap items-end gap-2">
+          <input type="hidden" name="quickAction" value="eta" />
+          <label className="grid gap-1 text-xs font-semibold text-[#637389]">
+            ETA schnell setzen
+            <input
+              name="eta"
+              type="date"
+              defaultValue={inputDate(deal.eta)}
+              className="h-9 rounded-md border border-[#dfe5ec] bg-white px-2 text-sm outline-none"
+            />
+          </label>
+          <label className="flex h-9 items-center gap-2 rounded-md border border-[#dfe5ec] bg-white px-2 text-xs font-semibold text-[#637389]">
+            <input name="etaUnbekannt" type="checkbox" defaultChecked={deal.etaUnbekannt} />
+            ETA unbekannt
+          </label>
+          <button className="h-9 rounded-md bg-[#17202c] px-3 text-sm font-semibold text-white" type="submit">
+            Speichern
+          </button>
+        </form>
+
+        <form action={quickUpdateDeal.bind(null, deal.id)} className="flex flex-wrap items-end gap-2">
+          <input type="hidden" name="quickAction" value="nextStep" />
+          <label className="grid min-w-56 flex-1 gap-1 text-xs font-semibold text-[#637389]">
+            Nächster Schritt
+            <input
+              name="naechsterSchritt"
+              defaultValue={deal.naechsterSchritt ?? ""}
+              placeholder="z. B. ETA beim Lieferanten anfragen"
+              className="h-9 rounded-md border border-[#dfe5ec] bg-white px-2 text-sm outline-none"
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-[#637389]">
+            Bearbeiten bis
+            <input
+              name="bearbeitenBis"
+              type="date"
+              defaultValue={inputDate(deal.bearbeitenBis)}
+              className="h-9 rounded-md border border-[#dfe5ec] bg-white px-2 text-sm outline-none"
+            />
+          </label>
+          <button className="h-9 rounded-md bg-[#17202c] px-3 text-sm font-semibold text-white" type="submit">
+            Setzen
+          </button>
+        </form>
+
+        <form action={quickUpdateDeal.bind(null, deal.id)} className="flex flex-wrap items-end gap-2">
+          <input type="hidden" name="quickAction" value="waitTarget" />
+          <label className="grid flex-1 gap-1 text-xs font-semibold text-[#637389]">
+            Wartet auf
+            <select
+              name="wartetAuf"
+              defaultValue={deal.wartetAuf}
+              className="h-9 rounded-md border border-[#dfe5ec] bg-white px-2 text-sm outline-none"
+            >
+              {waitTargets.map((target) => (
+                <option key={target} value={target}>
+                  {waitTargetLabels[target]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="h-9 rounded-md bg-[#17202c] px-3 text-sm font-semibold text-white" type="submit">
+            Setzen
+          </button>
+        </form>
+
+        <form action={quickUpdateDeal.bind(null, deal.id)} className="flex items-end">
+          <input type="hidden" name="quickAction" value="done" />
+          <button className="inline-flex h-9 items-center gap-2 rounded-md border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700" type="submit">
+            <CheckCircle2 size={15} /> Erledigt
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function DealSignals({ deal }: { deal: DealWithRelations }) {
   const signals = [
-    !deal.eta ? { label: "ETA fehlt", tone: "yellow" } : null,
+    !deal.eta && !deal.etaUnbekannt ? { label: "ETA fehlt", tone: "yellow" } : null,
+    !deal.eta && deal.etaUnbekannt ? { label: "ETA bewusst offen", tone: "neutral" } : null,
     signalForDate("ETD", deal.etd),
     signalForDate("ETA", deal.eta),
     signalForDate("To-do", deal.bearbeitenBis),
@@ -538,21 +640,25 @@ function DealForm({
         <Field name="kunde" label="Kunde" required defaultValue={deal?.kunde} placeholder="Lidl, Kaufland..." />
         <Field name="marke" label="Marke" defaultValue={deal?.marke} />
         <Field name="artikel" label="Artikel" required defaultValue={deal?.artikel} />
-        <Field name="stueckzahl" label="Stückzahl" defaultValue={deal?.stueckzahl} />
+        <Field name="stueckzahl" label="Stückzahl" required defaultValue={deal?.stueckzahl} />
         <Field name="preis" label="Preis" defaultValue={deal?.preis} />
         <Field name="warenwert" label="Warenwert" defaultValue={deal?.warenwert} />
         <Field name="marge" label="Marge" defaultValue={deal?.marge} />
         <Field name="dealnummer" label="Dealnummer" defaultValue={deal?.dealnummer} />
         <Field name="liefertermin" label="Liefertermin / KW" defaultValue={deal?.liefertermin} />
-        <Field name="po" label="PO" defaultValue={deal?.po} />
+        <Field name="po" label="PO" required defaultValue={deal?.po} />
         <Field name="drittlandswarePo" label="Drittlandsware PO" defaultValue={deal?.drittlandswarePo} />
         <Field name="drittlaender" label="Drittländer" defaultValue={deal?.drittlaender} />
         <Field name="fotomusterPo" label="Fotomuster PO" defaultValue={deal?.fotomusterPo} />
         <Field name="qsMusterPo" label="QS Muster PO" defaultValue={deal?.qsMusterPo} />
         <Field name="servicewarePo" label="Serviceware PO" defaultValue={deal?.servicewarePo} />
-        <Field name="etd" label="ETD" type="date" defaultValue={inputDate(deal?.etd)} />
+        <Field name="etd" label="ETD" type="date" required defaultValue={inputDate(deal?.etd)} />
         <Field name="eta" label="ETA" type="date" defaultValue={inputDate(deal?.eta)} />
-        <Field name="bearbeitenBis" label="Bearbeiten bis" type="date" defaultValue={inputDate(deal?.bearbeitenBis)} />
+        <label className="flex items-center gap-2 rounded-md border border-[#dfe5ec] bg-[#f8fafc] px-3 py-2 text-sm font-medium text-[#425166]">
+          <input name="etaUnbekannt" type="checkbox" defaultChecked={deal?.etaUnbekannt ?? false} />
+          ETA bewusst unbekannt
+        </label>
+        <Field name="bearbeitenBis" label="Bearbeiten bis" type="date" required defaultValue={inputDate(deal?.bearbeitenBis)} />
         <Field name="crdZeitfenster" label="CRD / Zeitfenster" defaultValue={deal?.crdZeitfenster} />
         <Field name="lieferant" label="Lieferant" defaultValue={deal?.lieferant} />
         <Field name="lieferantKontakt" label="Kontakt Lieferant" defaultValue={deal?.lieferantKontakt} />
@@ -584,7 +690,7 @@ function DealForm({
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <Textarea name="naechsterSchritt" label="Nächster Schritt" defaultValue={deal?.naechsterSchritt} />
+        <Textarea name="naechsterSchritt" label="Nächster Schritt" required defaultValue={deal?.naechsterSchritt} />
         <Textarea name="notizenKurz" label="Notizen" defaultValue={deal?.notizenKurz} />
       </div>
 
@@ -592,6 +698,38 @@ function DealForm({
         {submitLabel}
       </button>
     </form>
+  );
+}
+
+function ReminderPopup({ deals }: { deals: DealWithRelations[] }) {
+  if (deals.length === 0) return null;
+
+  return (
+    <aside className="fixed bottom-5 left-5 z-30 w-[min(360px,calc(100vw-2.5rem))] rounded-md border border-[#dfe5ec] bg-white p-4 shadow-xl">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-amber-50 text-amber-700">
+          <BellRing size={18} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-[#17202c]">Erinnerungen</p>
+          <p className="mt-1 text-sm text-[#637389]">
+            {deals.length} Deal{deals.length === 1 ? "" : "s"} brauchen Aufmerksamkeit.
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        {deals.slice(0, 3).map((deal) => (
+          <div key={deal.id} className="rounded-md bg-[#f8fafc] px-3 py-2 text-sm">
+            <p className="font-semibold">{deal.kunde} · {deal.artikel}</p>
+            <p className="mt-1 text-xs text-[#637389]">
+              {!deal.eta && !deal.etaUnbekannt
+                ? "ETA fehlt"
+                : relativeDate(deal.bearbeitenBis) || relativeDate(deal.eta) || "Bitte prüfen"}
+            </p>
+          </div>
+        ))}
+      </div>
+    </aside>
   );
 }
 
@@ -810,16 +948,19 @@ function Textarea({
   name,
   label,
   defaultValue,
+  required = false,
 }: {
   name: string;
   label: string;
   defaultValue?: string | null;
+  required?: boolean;
 }) {
   return (
     <label className="grid gap-1 text-sm font-medium text-[#425166]">
       {label}
       <textarea
         name={name}
+        required={required}
         defaultValue={defaultValue ?? ""}
         rows={3}
         className="resize-y rounded-md border border-[#dfe5ec] bg-white px-3 py-2 text-sm text-[#17202c] outline-none focus:border-[#4f7cff]"

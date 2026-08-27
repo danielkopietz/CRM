@@ -60,7 +60,7 @@ export const documentStatuses = Object.keys(documentStatusLabels) as DocumentSta
 
 export type TrafficLight = "green" | "yellow" | "red";
 
-export function getTrafficLight(deal: Pick<Deal, "eta" | "bearbeitenBis" | "status">): TrafficLight {
+export function getTrafficLight(deal: Pick<Deal, "eta" | "etaUnbekannt" | "bearbeitenBis" | "status">): TrafficLight {
   if (deal.status === "ABGESCHLOSSEN" || deal.status === "FREIGEGEBEN") {
     return "green";
   }
@@ -71,7 +71,7 @@ export function getTrafficLight(deal: Pick<Deal, "eta" | "bearbeitenBis" | "stat
 
   const today = startOfDay(new Date());
 
-  if (!deal.eta) {
+  if (!deal.eta && !deal.etaUnbekannt) {
     return "yellow";
   }
 

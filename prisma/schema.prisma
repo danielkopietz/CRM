@@ -70,6 +70,7 @@ model Deal {
   servicewarePo      String?
   etd                DateTime?
   eta                DateTime?
+  etaUnbekannt       Boolean        @default(false)
   crdZeitfenster     String?
   status             DealStatus     @default(NEU)
   priority           DealPriority   @default(NORMAL)

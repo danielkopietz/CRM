@@ -1,0 +1,2 @@
+ALTER TABLE "Deal"
+ADD COLUMN "etaUnbekannt" BOOLEAN NOT NULL DEFAULT false;
