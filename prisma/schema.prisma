@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DealStatus {
+  NEU
+  IN_KLAERUNG
+  PO_OFFEN
+  MUSTER_OFFEN
+  PRODUKTION
+  VERSCHIFFT
+  VERZOLLUNG_VORBEREITEN
+  BEIM_ZOLL
+  FREIGEGEBEN
+  ABGESCHLOSSEN
+  PROBLEM_ROT
+}
+
+model Deal {
+  id                 String     @id @default(cuid())
+  kunde              String
+  marke              String?
+  artikel            String
+  stueckzahl         String?
+  preis              String?
+  dealnummer         String?
+  liefertermin       String?
+  po                 String?
+  drittlandswarePo   String?
+  drittlaender       String?
+  fotomusterPo       String?
+  qsMusterPo         String?
+  servicewarePo      String?
+  etd                DateTime?
+  eta                DateTime?
+  crdZeitfenster     String?
+  status             DealStatus @default(NEU)
+  naechsterSchritt   String?
+  bearbeitenBis      DateTime?
+  notizenKurz        String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  notes              DealNote[]
+
+  @@index([kunde])
+  @@index([status])
+  @@index([eta])
+  @@index([bearbeitenBis])
+}
+
+model DealNote {
+  id        String   @id @default(cuid())
+  dealId    String
+  text      String
+  createdAt DateTime @default(now())
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+}

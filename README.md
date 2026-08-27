@@ -1,0 +1,66 @@
+# CRM Verzollung
+
+Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsprozesse.
+
+## MVP
+
+- Auth0 Login mit E-Mail und Passwort
+- PostgreSQL Datenbank ueber Prisma
+- Deals fuer Lidl, Kaufland, Hartmann usw. anlegen und bearbeiten
+- Felder fuer Marke, Artikel, Menge, Preis, Dealnummer, PO, ETD, ETA, CRD, Liefertermin und Notizen
+- Status: Neu, In Klaerung, PO offen, Muster offen, Produktion, Verschifft, Verzollung vorbereiten, Beim Zoll, Freigegeben, Abgeschlossen, Problem / Rot
+- Ampel: Gruen, Gelb, Rot
+- Verlauf/Notizen pro Deal
+- Dockerfile fuer Coolify
+
+## Ampelregeln
+
+- Gruen: Deal ist nicht kritisch
+- Gelb: `Bearbeiten bis` ist heute oder morgen
+- Rot: ETA ist heute/ueberschritten, `Bearbeiten bis` ist ueberfaellig oder Status ist `Problem / Rot`
+
+## Lokale Entwicklung
+
+```bash
+cp .env.example .env.local
+npm install
+npm run db:push
+npm run dev
+```
+
+## Coolify Setup
+
+1. GitHub Repository verbinden: `https://github.com/danielkopietz/CRM`
+2. Neue PostgreSQL-Datenbank in Coolify anlegen
+3. App als Dockerfile Deployment anlegen
+4. Domain setzen: `crm.automatisierungen-ki.de`
+5. Environment Variables setzen:
+
+```bash
+DATABASE_URL=postgresql://...
+AUTH0_DOMAIN=...
+AUTH0_CLIENT_ID=...
+AUTH0_CLIENT_SECRET=...
+AUTH0_SECRET=...
+APP_BASE_URL=https://crm.automatisierungen-ki.de
+```
+
+`AUTH0_SECRET` erzeugen:
+
+```bash
+openssl rand -hex 32
+```
+
+## Auth0 URLs
+
+In der Auth0 Application eintragen:
+
+```text
+Allowed Callback URLs:
+https://crm.automatisierungen-ki.de/auth/callback
+http://localhost:3000/auth/callback
+
+Allowed Logout URLs:
+https://crm.automatisierungen-ki.de
+http://localhost:3000
+```
