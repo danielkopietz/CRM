@@ -17,6 +17,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
+import { Fragment } from "react";
 import clsx from "clsx";
 import { addNote, createDeal, deleteDeal, updateDeal } from "@/app/actions";
 import {
@@ -390,7 +391,7 @@ function CompactDealTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1120px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[980px] border-collapse text-left text-sm">
         <thead className="bg-[#f8fafc] text-xs font-semibold uppercase text-[#637389]">
           <tr>
             <th className="px-4 py-3">Ampel</th>
@@ -410,47 +411,62 @@ function CompactDealTable({
             const light = getTrafficLight(deal);
             const risk = getRiskLight(deal);
             return (
-              <tr key={deal.id} className="align-top hover:bg-[#fafbfc]">
-                <td className="px-4 py-4">
-                  <span className={clsx("inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold", badgeClass(light))}>
-                    <span className={clsx("h-2 w-2 rounded-full", lightDot(light))} />
-                    {trafficLightLabel(light)}
-                  </span>
-                  <DealSignals deal={deal} />
-                </td>
-                <td className="px-4 py-4">
-                  <p className="font-semibold text-[#17202c]">{deal.kunde} · {deal.artikel}</p>
-                  <p className="mt-1 text-xs text-[#637389]">
-                    {deal.marke || "-"} · {statusLabels[deal.status]} · {priorityLabels[deal.priority]}
-                  </p>
-                  <p className="mt-1 text-xs text-[#637389]">PO {deal.po || "-"} · Deal {deal.dealnummer || "-"}</p>
-                </td>
-                <td className="px-4 py-4">
-                  <p>{deal.stueckzahl || "-"}</p>
-                  <p className="text-xs text-[#637389]">{deal.warenwert || deal.preis || "-"}</p>
-                </td>
-                <td className="px-4 py-4">{formatDate(deal.etd) || "-"}</td>
-                <td className="px-4 py-4">
-                  <p>{formatDate(deal.eta) || "ETA fehlt"}</p>
-                  <p className="text-xs text-[#637389]">{relativeDate(deal.eta)}</p>
-                </td>
-                <td className="px-4 py-4">
-                  <p>{formatDate(deal.bearbeitenBis) || "-"}</p>
-                  <p className="text-xs text-[#637389]">{relativeDate(deal.bearbeitenBis)}</p>
-                </td>
-                <td className="px-4 py-4">{waitTargetLabels[deal.wartetAuf]}</td>
-                <td className="px-4 py-4">
-                  <span className={clsx("rounded-md px-2 py-1 text-xs font-semibold", badgeClass(risk))}>
-                    {riskLabels[deal.riskStatus]}
-                  </span>
-                </td>
-                <td className="max-w-[280px] px-4 py-4">
-                  <p className="line-clamp-3 text-[#425166]">{deal.naechsterSchritt || "-"}</p>
-                </td>
-                <td className="px-4 py-4">
-                  {showDetails ? <DealDetails deal={deal} /> : <Link href="/?tab=deals" className="font-semibold text-[#244ac8]">Öffnen</Link>}
-                </td>
-              </tr>
+              <Fragment key={deal.id}>
+                <tr key={`${deal.id}-summary`} className="align-top hover:bg-[#fafbfc]">
+                  <td className="px-3 py-4">
+                    <span className={clsx("inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold", badgeClass(light))}>
+                      <span className={clsx("h-2 w-2 rounded-full", lightDot(light))} />
+                      {trafficLightLabel(light)}
+                    </span>
+                    <DealSignals deal={deal} />
+                  </td>
+                  <td className="px-3 py-4">
+                    <p className="font-semibold text-[#17202c]">{deal.kunde} · {deal.artikel}</p>
+                    <p className="mt-1 text-xs text-[#637389]">
+                      {deal.marke || "-"} · {statusLabels[deal.status]} · {priorityLabels[deal.priority]}
+                    </p>
+                    <p className="mt-1 text-xs text-[#637389]">PO {deal.po || "-"} · Deal {deal.dealnummer || "-"}</p>
+                  </td>
+                  <td className="px-3 py-4">
+                    <p>{deal.stueckzahl || "-"}</p>
+                    <p className="text-xs text-[#637389]">{deal.warenwert || deal.preis || "-"}</p>
+                  </td>
+                  <td className="px-3 py-4">{formatDate(deal.etd) || "-"}</td>
+                  <td className="px-3 py-4">
+                    <p>{formatDate(deal.eta) || "ETA fehlt"}</p>
+                    <p className="text-xs text-[#637389]">{relativeDate(deal.eta)}</p>
+                  </td>
+                  <td className="px-3 py-4">
+                    <p>{formatDate(deal.bearbeitenBis) || "-"}</p>
+                    <p className="text-xs text-[#637389]">{relativeDate(deal.bearbeitenBis)}</p>
+                  </td>
+                  <td className="px-3 py-4">{waitTargetLabels[deal.wartetAuf]}</td>
+                  <td className="px-3 py-4">
+                    <span className={clsx("rounded-md px-2 py-1 text-xs font-semibold", badgeClass(risk))}>
+                      {riskLabels[deal.riskStatus]}
+                    </span>
+                  </td>
+                  <td className="max-w-[240px] px-3 py-4">
+                    <p className="line-clamp-3 text-[#425166]">{deal.naechsterSchritt || "-"}</p>
+                  </td>
+                  <td className="px-3 py-4">
+                    {showDetails ? (
+                      <span className="text-sm font-medium text-[#637389]">Details unten</span>
+                    ) : (
+                      <Link href="/?tab=deals" className="font-semibold text-[#244ac8]">
+                        Öffnen
+                      </Link>
+                    )}
+                  </td>
+                </tr>
+                {showDetails ? (
+                  <tr key={`${deal.id}-details`} className="bg-white">
+                    <td colSpan={10} className="px-3 pb-4">
+                      <DealDetails deal={deal} />
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
             );
           })}
         </tbody>
@@ -461,11 +477,11 @@ function CompactDealTable({
 
 function DealDetails({ deal }: { deal: DealWithRelations }) {
   return (
-    <details className="min-w-44">
-      <summary className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-[#dfe5ec] px-3 py-2 text-sm font-semibold text-[#425166]">
+    <details className="group">
+      <summary className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-[#dfe5ec] bg-white px-3 py-2 text-sm font-semibold text-[#425166] group-open:hidden">
         <Pencil size={15} /> Details
       </summary>
-      <div className="mt-3 grid w-[min(1100px,calc(100vw-3rem))] gap-4 rounded-md border border-[#dfe5ec] bg-white p-4 shadow-xl xl:grid-cols-[1fr_340px]">
+      <div className="mt-3 grid w-full gap-4 rounded-md border border-[#dfe5ec] bg-white p-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div>
           <SectionTitle icon={<Pencil size={17} />} title="Deal bearbeiten" />
           <DealForm action={updateDeal.bind(null, deal.id)} deal={deal} submitLabel="Änderungen speichern" />
