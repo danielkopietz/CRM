@@ -71,6 +71,10 @@ export function getTrafficLight(deal: Pick<Deal, "eta" | "bearbeitenBis" | "stat
 
   const today = startOfDay(new Date());
 
+  if (!deal.eta) {
+    return "yellow";
+  }
+
   if (deal.eta && startOfDay(deal.eta).getTime() <= today.getTime()) {
     return "red";
   }
@@ -104,17 +108,6 @@ export function getRiskLight(
   if (deal.riskStatus === "HOCH") return "red";
   if (deal.riskStatus === "MITTEL") return "yellow";
 
-  const docs = [
-    deal.commercialInvoice,
-    deal.packingList,
-    deal.billOfLading,
-    deal.ursprungsnachweis,
-    deal.hsCode,
-    deal.ceDokumente,
-    deal.pruefberichte,
-  ];
-
-  if (docs.includes("FEHLT")) return "yellow";
   return "green";
 }
 

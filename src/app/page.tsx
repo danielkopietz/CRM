@@ -100,7 +100,7 @@ export default async function Home({
   const etdWeek = deals.filter((deal) => isWithinDays(deal.etd, 7));
   const dueToday = deals.filter((deal) => daysUntil(deal.bearbeitenBis) === 0);
   const blocked = deals.filter((deal) => deal.wartetAuf !== "KEIN_BLOCKER");
-  const docGaps = deals.filter((deal) => getRiskLight(deal) !== "green");
+  const missingEta = deals.filter((deal) => !deal.eta);
 
   return (
     <main className="min-h-screen bg-[#f4f6f8] text-[#17202c]">
@@ -168,7 +168,7 @@ export default async function Home({
             etdWeek={etdWeek}
             dueToday={dueToday}
             blocked={blocked}
-            docGaps={docGaps}
+            missingEta={missingEta}
             params={params}
           />
         )}
@@ -184,7 +184,7 @@ function LoginScreen() {
         <p className="text-sm font-medium text-[#637389]">Verzollung CRM</p>
         <h1 className="mt-2 text-2xl font-semibold text-[#17202c]">Bitte anmelden</h1>
         <p className="mt-3 text-sm leading-6 text-[#637389]">
-          Nach dem Login siehst du alle Deals, Fristen, Dokumentenlücken und Notizen.
+          Nach dem Login siehst du alle Deals, Fristen, Blocker und Notizen.
         </p>
         <a
           href="/auth/login"
@@ -206,7 +206,7 @@ function DashboardView({
   etdWeek,
   dueToday,
   blocked,
-  docGaps,
+  missingEta,
   params,
 }: {
   allDeals: DealWithRelations[];
@@ -217,7 +217,7 @@ function DashboardView({
   etdWeek: DealWithRelations[];
   dueToday: DealWithRelations[];
   blocked: DealWithRelations[];
-  docGaps: DealWithRelations[];
+  missingEta: DealWithRelations[];
   params: Search;
 }) {
   return (
@@ -228,7 +228,7 @@ function DashboardView({
         <MetricCard label="Gelb" value={yellowDeals.length} tone="yellow" icon={<Hourglass size={18} />} />
         <MetricCard label="ETA 7 Tage" value={etaWeek.length} icon={<PackageCheck size={18} />} />
         <MetricCard label="ETD 7 Tage" value={etdWeek.length} icon={<Ship size={18} />} />
-        <MetricCard label="Dokumentenlücken" value={docGaps.length} tone="red" icon={<FileCheck2 size={18} />} />
+        <MetricCard label="ETA fehlt" value={missingEta.length} tone="yellow" icon={<AlertTriangle size={18} />} />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
@@ -236,7 +236,7 @@ function DashboardView({
           <PanelHeader
             icon={<TrendingUp size={18} />}
             title="Heute handeln"
-            detail="Kritische Deals, Blocker und Fristen zuerst"
+            detail="Fehlende ETA, kritische Deals, Blocker und Fristen zuerst"
           />
           <CompactDealTable deals={criticalDeals.slice(0, 10)} empty="Aktuell brennt nichts." />
         </section>
@@ -416,6 +416,7 @@ function CompactDealTable({
                     <span className={clsx("h-2 w-2 rounded-full", lightDot(light))} />
                     {trafficLightLabel(light)}
                   </span>
+                  <DealSignals deal={deal} />
                 </td>
                 <td className="px-4 py-4">
                   <p className="font-semibold text-[#17202c]">{deal.kunde} · {deal.artikel}</p>
@@ -430,7 +431,7 @@ function CompactDealTable({
                 </td>
                 <td className="px-4 py-4">{formatDate(deal.etd) || "-"}</td>
                 <td className="px-4 py-4">
-                  <p>{formatDate(deal.eta) || "-"}</p>
+                  <p>{formatDate(deal.eta) || "ETA fehlt"}</p>
                   <p className="text-xs text-[#637389]">{relativeDate(deal.eta)}</p>
                 </td>
                 <td className="px-4 py-4">
@@ -481,6 +482,28 @@ function DealDetails({ deal }: { deal: DealWithRelations }) {
         </div>
       </div>
     </details>
+  );
+}
+
+function DealSignals({ deal }: { deal: DealWithRelations }) {
+  const signals = [
+    !deal.eta ? { label: "ETA fehlt", tone: "yellow" } : null,
+    signalForDate("ETD", deal.etd),
+    signalForDate("ETA", deal.eta),
+    signalForDate("To-do", deal.bearbeitenBis),
+    deal.wartetAuf !== "KEIN_BLOCKER" ? { label: `Wartet: ${waitTargetLabels[deal.wartetAuf]}`, tone: "yellow" } : null,
+  ].filter(Boolean) as { label: string; tone: "red" | "yellow" | "neutral" }[];
+
+  if (signals.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex max-w-36 flex-wrap gap-1">
+      {signals.slice(0, 3).map((signal) => (
+        <span key={signal.label} className={clsx("rounded px-1.5 py-0.5 text-[11px] font-semibold", signalClass(signal.tone))}>
+          {signal.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -850,6 +873,16 @@ function relativeDate(value?: Date | null) {
   return `in ${diff} Tagen`;
 }
 
+function signalForDate(label: string, value?: Date | null) {
+  const diff = daysUntil(value);
+  if (diff === null) return null;
+  if (diff < 0) return { label: `${label} überfällig`, tone: "red" as const };
+  if (diff === 0) return { label: `${label} heute`, tone: "red" as const };
+  if (diff === 1) return { label: `${label} morgen`, tone: "yellow" as const };
+  if (diff <= 7) return { label: `${label} in ${diff} Tagen`, tone: "neutral" as const };
+  return null;
+}
+
 function parseMonth(value?: string) {
   if (value && /^\d{4}-\d{2}$/.test(value)) {
     const [year, month] = value.split("-").map(Number);
@@ -915,4 +948,10 @@ function documentClass(status: string) {
   if (status === "ERHALTEN") return "bg-sky-50 text-sky-700";
   if (status === "GEPRUEFT") return "bg-emerald-50 text-emerald-700";
   return "bg-[#eef2f5] text-[#637389]";
+}
+
+function signalClass(tone: "red" | "yellow" | "neutral") {
+  if (tone === "red") return "bg-rose-50 text-rose-700";
+  if (tone === "yellow") return "bg-amber-50 text-amber-700";
+  return "bg-sky-50 text-sky-700";
 }
