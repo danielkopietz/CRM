@@ -7,7 +7,8 @@ Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsproz
 - Auth0 Login mit E-Mail und Passwort
 - PostgreSQL Datenbank ueber Prisma
 - Deals fuer Lidl, Kaufland, Hartmann usw. anlegen und bearbeiten
-- Felder fuer Marke, Artikel, Menge, Preis, Dealnummer, PO, ETD, ETA, CRD, Liefertermin und Notizen
+- Felder fuer Marke, Artikel, Menge, Preis, LIDL Dealnummer, Ausmusterung, CRD, Liefertermin und Notizen
+- Eigene PO-Nummer, ETD und ETA fuer Mass Production, Drittlandsware, Fotomuster, QS Muster und Serviceware
 - Status: Neu, In Klaerung, PO offen, Muster offen, Produktion, Verschifft, Verzollung vorbereiten, Beim Zoll, Freigegeben, Abgeschlossen, Problem / Rot
 - Ampel: Gruen, Gelb, Rot
 - Verlauf/Notizen pro Deal
@@ -15,7 +16,10 @@ Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsproz
 - Einkauf-KPIs: Heute faellig, ETA/ETD diese Woche, Blocker und Dokumentenluecken
 - Lieferant, Spedition, Incoterm, POL/POD, Container, BL/AWB und Zahlungsstatus
 - Dokumentenstatus fuer Commercial Invoice, Packing List, BL/AWB, Ursprung, HS Code, CE und Pruefberichte
+- Prozessdokumente fuer Drafts, Verschiffungspapiere, Telex B/L, Proforma Drittlandsware, 100% Inspektion, Shipment Release, Release Document, H1, T1 und Entladebericht
 - Automatische Aenderungshistorie fuer Menge, Preis, ETD und ETA
+- Dynamische Erinnerungen drei Tage vor allen ETDs, 14 Tage vor Mass-Production-/Drittlandsware-ETA fuer die Verzollung und drei Tage vor ETA fuer H1/T1
+- Fertige Uebersichten fuer Silvercrest, Sanitas, Kaufland und Hartmann
 - Dockerfile fuer Coolify
 
 ## Ampelregeln

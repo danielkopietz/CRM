@@ -58,6 +58,17 @@ type Search = {
   status?: string;
   ampel?: string;
   month?: string;
+  preset?: string;
+};
+
+type PoReminder = {
+  id: string;
+  deal: DealWithRelations;
+  title: string;
+  detail: string;
+  date: Date;
+  days: number;
+  tone: "red" | "yellow" | "blue";
 };
 
 async function loadDeals(): Promise<DealWithRelations[]> {
@@ -99,15 +110,12 @@ export default async function Home({
 
   const redDeals = deals.filter((deal) => getTrafficLight(deal) === "red");
   const yellowDeals = deals.filter((deal) => getTrafficLight(deal) === "yellow");
-  const etaWeek = deals.filter((deal) => isWithinDays(deal.eta, 7));
-  const etdWeek = deals.filter((deal) => isWithinDays(deal.etd, 7));
+  const etaWeek = deals.filter((deal) => getPoSchedules(deal).some((po) => po.number && isWithinDays(po.eta, 7)));
+  const etdWeek = deals.filter((deal) => getPoSchedules(deal).some((po) => po.number && isWithinDays(po.etd, 7)));
   const dueToday = deals.filter((deal) => daysUntil(deal.bearbeitenBis) === 0);
   const blocked = deals.filter((deal) => deal.wartetAuf !== "KEIN_BLOCKER");
   const missingEta = deals.filter((deal) => !deal.eta && !deal.etaUnbekannt);
-  const reminderDeals = criticalDeals.filter((deal) => {
-    const light = getTrafficLight(deal);
-    return light === "red" || daysUntil(deal.bearbeitenBis) === 0 || (!deal.eta && !deal.etaUnbekannt);
-  });
+  const poReminders = buildPoReminders(deals);
 
   return (
     <main className="min-h-screen bg-[#f4f6f8] text-[#17202c]">
@@ -176,11 +184,12 @@ export default async function Home({
             dueToday={dueToday}
             blocked={blocked}
             missingEta={missingEta}
+            poReminders={poReminders}
             params={params}
           />
         )}
       </div>
-      <ReminderPopup deals={reminderDeals} />
+      <ReminderPopup reminders={poReminders} />
     </main>
   );
 }
@@ -215,6 +224,7 @@ function DashboardView({
   dueToday,
   blocked,
   missingEta,
+  poReminders,
   params,
 }: {
   allDeals: DealWithRelations[];
@@ -226,18 +236,22 @@ function DashboardView({
   dueToday: DealWithRelations[];
   blocked: DealWithRelations[];
   missingEta: DealWithRelations[];
+  poReminders: PoReminder[];
   params: Search;
 }) {
   return (
     <>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
         <MetricCard label="Rot / überfällig" value={redDeals.length} tone="red" icon={<AlertTriangle size={18} />} />
         <MetricCard label="Heute fällig" value={dueToday.length} tone="yellow" icon={<CalendarClock size={18} />} />
         <MetricCard label="Gelb" value={yellowDeals.length} tone="yellow" icon={<Hourglass size={18} />} />
         <MetricCard label="ETA 7 Tage" value={etaWeek.length} icon={<PackageCheck size={18} />} />
         <MetricCard label="ETD 7 Tage" value={etdWeek.length} icon={<Ship size={18} />} />
         <MetricCard label="ETA fehlt" value={missingEta.length} tone="yellow" icon={<AlertTriangle size={18} />} />
+        <MetricCard label="PO Erinnerungen" value={poReminders.length} tone="yellow" icon={<BellRing size={18} />} />
       </div>
+
+      <ReminderPanel reminders={poReminders} />
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="rounded-md border border-[#dfe5ec] bg-white">
@@ -349,37 +363,64 @@ function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: S
 }
 
 function Filters({ params }: { params: Search }) {
+  const presets = ["Silvercrest", "Sanitas", "Kaufland", "Hartmann"];
+
   return (
-    <form className="grid gap-3 border-b border-[#dfe5ec] p-4 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto]" action="/">
-      <input type="hidden" name="tab" value="deals" />
-      <label className="flex h-10 items-center gap-2 rounded-md border border-[#dfe5ec] bg-[#f8fafc] px-3">
-        <Search size={16} className="text-[#637389]" />
-        <input
-          name="q"
-          defaultValue={params.q ?? ""}
-          placeholder="Suche Kunde, Artikel, PO, Lieferant..."
-          className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-        />
-      </label>
-      <input name="kunde" defaultValue={params.kunde ?? ""} placeholder="Kunde" className="h-10 rounded-md border border-[#dfe5ec] px-3 text-sm outline-none" />
-      <select name="status" defaultValue={params.status ?? ""} className="h-10 rounded-md border border-[#dfe5ec] px-3 text-sm outline-none">
-        <option value="">Alle Status</option>
-        {dealStatuses.map((status) => (
-          <option key={status} value={status}>
-            {statusLabels[status]}
-          </option>
+    <div className="border-b border-[#dfe5ec] p-4">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-xs font-semibold uppercase text-[#637389]">Fertige Übersichten</span>
+        {presets.map((preset) => (
+          <Link
+            key={preset}
+            href={`/?tab=deals&preset=${encodeURIComponent(preset)}`}
+            className={clsx(
+              "rounded-md border px-3 py-2 text-sm font-semibold",
+              params.preset === preset
+                ? "border-[#17202c] bg-[#17202c] text-white"
+                : "border-[#dfe5ec] bg-[#f8fafc] text-[#425166]",
+            )}
+          >
+            {preset}
+          </Link>
         ))}
-      </select>
-      <select name="ampel" defaultValue={params.ampel ?? ""} className="h-10 rounded-md border border-[#dfe5ec] px-3 text-sm outline-none">
-        <option value="">Alle Ampeln</option>
-        <option value="red">Rot</option>
-        <option value="yellow">Gelb</option>
-        <option value="green">Grün</option>
-      </select>
-      <button className="h-10 rounded-md bg-[#17202c] px-4 text-sm font-semibold text-white" type="submit">
-        Filtern
-      </button>
-    </form>
+        {params.preset ? (
+          <Link href="/?tab=deals" className="px-2 py-2 text-sm font-semibold text-[#637389]">
+            Filter zurücksetzen
+          </Link>
+        ) : null}
+      </div>
+      <form className="grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto]" action="/">
+        <input type="hidden" name="tab" value="deals" />
+        {params.preset ? <input type="hidden" name="preset" value={params.preset} /> : null}
+        <label className="flex h-10 items-center gap-2 rounded-md border border-[#dfe5ec] bg-[#f8fafc] px-3">
+          <Search size={16} className="text-[#637389]" />
+          <input
+            name="q"
+            defaultValue={params.q ?? ""}
+            placeholder="Suche Kunde, Marke, Artikel, Deal oder PO..."
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+          />
+        </label>
+        <input name="kunde" defaultValue={params.kunde ?? ""} placeholder="Kunde" className="h-10 rounded-md border border-[#dfe5ec] px-3 text-sm outline-none" />
+        <select name="status" defaultValue={params.status ?? ""} className="h-10 rounded-md border border-[#dfe5ec] px-3 text-sm outline-none">
+          <option value="">Alle Status</option>
+          {dealStatuses.map((status) => (
+            <option key={status} value={status}>
+              {statusLabels[status]}
+            </option>
+          ))}
+        </select>
+        <select name="ampel" defaultValue={params.ampel ?? ""} className="h-10 rounded-md border border-[#dfe5ec] px-3 text-sm outline-none">
+          <option value="">Alle Ampeln</option>
+          <option value="red">Rot</option>
+          <option value="yellow">Gelb</option>
+          <option value="green">Grün</option>
+        </select>
+        <button className="h-10 rounded-md bg-[#17202c] px-4 text-sm font-semibold text-white" type="submit">
+          Filtern
+        </button>
+      </form>
+    </div>
   );
 }
 
@@ -398,14 +439,14 @@ function CompactDealTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[1480px] border-collapse text-left text-sm">
         <thead className="bg-[#f8fafc] text-xs font-semibold uppercase text-[#637389]">
           <tr>
             <th className="px-4 py-3">Ampel</th>
-            <th className="px-4 py-3">Deal</th>
-            <th className="px-4 py-3">Menge / Wert</th>
-            <th className="px-4 py-3">ETD</th>
-            <th className="px-4 py-3">ETA</th>
+            <th className="px-4 py-3">Marke / LIDL Deal</th>
+            <th className="px-4 py-3">Artikel / Lieferung</th>
+            <th className="px-4 py-3">Menge / Preis</th>
+            <th className="px-4 py-3">POs mit ETD / ETA</th>
             <th className="px-4 py-3">Bearbeiten</th>
             <th className="px-4 py-3">Wartet auf</th>
             <th className="px-4 py-3">Risiko</th>
@@ -434,26 +475,32 @@ function CompactDealTable({
                     <DealSignals deal={deal} />
                   </td>
                   <td className="px-3 py-4">
-                    <p className="font-semibold text-[#17202c]">{deal.kunde} · {deal.artikel}</p>
+                    <p className="font-semibold text-[#17202c]">{deal.marke || "Marke fehlt"}</p>
                     <p className="mt-1 text-xs text-[#637389]">
-                      {deal.marke || "-"} · {statusLabels[deal.status]} · {priorityLabels[deal.priority]}
+                      {deal.kunde} · {statusLabels[deal.status]} · {priorityLabels[deal.priority]}
                     </p>
-                    <p className="mt-1 text-xs text-[#637389]">PO {deal.po || "-"} · Deal {deal.dealnummer || "-"}</p>
+                    <p className="mt-2 text-xs font-semibold text-[#425166]">LIDL Deal {deal.dealnummer || "-"}</p>
+                    <p className="mt-1 text-xs text-[#637389]">Ausmusterung: {deal.ausmusterung || "-"}</p>
+                  </td>
+                  <td className="px-3 py-4">
+                    <p className="font-semibold text-[#17202c]">{deal.artikel}</p>
+                    <p className="mt-1 text-xs text-[#637389]">Liefertermin: {deal.liefertermin || "-"}</p>
+                    <p className="mt-1 text-xs text-[#637389]">CRD Window: {deal.crdZeitfenster || "-"}</p>
                   </td>
                   <td className="px-3 py-4">
                     <p>{deal.stueckzahl || "-"}</p>
-                    <p className="text-xs text-[#637389]">{deal.warenwert || deal.preis || "-"}</p>
+                    <p className="mt-1 text-xs text-[#637389]">Preis: {deal.preis || "-"}</p>
+                    <p className="mt-1 text-xs text-[#637389]">Warenwert: {deal.warenwert || "-"}</p>
                   </td>
-                  <td className="px-3 py-4">{formatDate(deal.etd) || "-"}</td>
-                  <td className="px-3 py-4">
-                    <p>{formatDate(deal.eta) || (deal.etaUnbekannt ? "bewusst offen" : "ETA fehlt")}</p>
-                    <p className="text-xs text-[#637389]">{relativeDate(deal.eta)}</p>
-                  </td>
+                  <td className="min-w-[330px] px-3 py-4"><PoOverview deal={deal} /></td>
                   <td className="px-3 py-4">
                     <p>{formatDate(deal.bearbeitenBis) || "-"}</p>
                     <p className="text-xs text-[#637389]">{relativeDate(deal.bearbeitenBis)}</p>
                   </td>
-                  <td className="px-3 py-4">{waitTargetLabels[deal.wartetAuf]}</td>
+                  <td className="max-w-[180px] px-3 py-4">
+                    <p>{waitTargetLabels[deal.wartetAuf]}</p>
+                    <p className="mt-1 text-xs text-[#637389]">{deal.wartetAufNotiz || "-"}</p>
+                  </td>
                   <td className="px-3 py-4">
                     <span className={clsx("rounded-md px-2 py-1 text-xs font-semibold", badgeClass(risk))}>
                       {riskLabels[deal.riskStatus]}
@@ -461,6 +508,7 @@ function CompactDealTable({
                   </td>
                   <td className="max-w-[240px] px-3 py-4">
                     <p className="line-clamp-3 text-[#425166]">{deal.naechsterSchritt || "-"}</p>
+                    {deal.notizenKurz ? <p className="mt-2 line-clamp-2 text-xs text-[#637389]">{deal.notizenKurz}</p> : null}
                   </td>
                   <td className="px-3 py-4">
                     {showDetails ? (
@@ -491,6 +539,24 @@ function CompactDealTable({
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function PoOverview({ deal }: { deal: Deal }) {
+  return (
+    <div className="grid gap-2">
+      {getPoSchedules(deal).map((po) => (
+        <div key={po.key} className="grid grid-cols-[112px_1fr] gap-2 rounded-md bg-[#f8fafc] px-2 py-1.5 text-xs">
+          <span className="font-semibold text-[#425166]">{po.shortLabel}</span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-[#17202c]">PO {po.number || "-"}</span>
+            <span className="mt-0.5 block text-[#637389]">
+              ETD {formatDate(po.etd) || "-"} · ETA {formatDate(po.eta) || (po.etaUnknown ? "bewusst offen" : "-")}
+            </span>
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -528,7 +594,7 @@ function QuickActionBar({ deal }: { deal: DealWithRelations }) {
         <form action={quickUpdateDeal.bind(null, deal.id)} className="flex flex-wrap items-end gap-2">
           <input type="hidden" name="quickAction" value="eta" />
           <label className="grid gap-1 text-xs font-semibold text-[#637389]">
-            ETA schnell setzen
+            ETA Mass Production
             <input
               name="eta"
               type="date"
@@ -636,30 +702,86 @@ function DealForm({
 }) {
   return (
     <form action={action} className="mt-4 grid gap-4">
+      <SectionTitle icon={<ClipboardList size={17} />} title="Deal-Grunddaten" />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <Field name="kunde" label="Kunde" required defaultValue={deal?.kunde} placeholder="Lidl, Kaufland..." />
-        <Field name="marke" label="Marke" defaultValue={deal?.marke} />
+        <Field name="marke" label="Marke" defaultValue={deal?.marke} placeholder="Silvercrest, Sanitas..." />
+        <Field name="dealnummer" label="LIDL Deal Nummer" defaultValue={deal?.dealnummer} />
+        <Field name="ausmusterung" label="Ausmusterung" defaultValue={deal?.ausmusterung} placeholder="Datum, KW oder Hinweis" />
         <Field name="artikel" label="Artikel" required defaultValue={deal?.artikel} />
+        <Field name="liefertermin" label="Liefertermin / KW" defaultValue={deal?.liefertermin} />
+        <Field name="crdZeitfenster" label="CRD Window" defaultValue={deal?.crdZeitfenster} />
         <Field name="stueckzahl" label="Stückzahl" required defaultValue={deal?.stueckzahl} />
         <Field name="preis" label="Preis" defaultValue={deal?.preis} />
         <Field name="warenwert" label="Warenwert" defaultValue={deal?.warenwert} />
         <Field name="marge" label="Marge" defaultValue={deal?.marge} />
-        <Field name="dealnummer" label="Dealnummer" defaultValue={deal?.dealnummer} />
-        <Field name="liefertermin" label="Liefertermin / KW" defaultValue={deal?.liefertermin} />
-        <Field name="po" label="PO" required defaultValue={deal?.po} />
-        <Field name="drittlandswarePo" label="Drittlandsware PO" defaultValue={deal?.drittlandswarePo} />
-        <Field name="drittlaender" label="Drittländer" defaultValue={deal?.drittlaender} />
-        <Field name="fotomusterPo" label="Fotomuster PO" defaultValue={deal?.fotomusterPo} />
-        <Field name="qsMusterPo" label="QS Muster PO" defaultValue={deal?.qsMusterPo} />
-        <Field name="servicewarePo" label="Serviceware PO" defaultValue={deal?.servicewarePo} />
-        <Field name="etd" label="ETD" type="date" required defaultValue={inputDate(deal?.etd)} />
-        <Field name="eta" label="ETA" type="date" defaultValue={inputDate(deal?.eta)} />
-        <label className="flex items-center gap-2 rounded-md border border-[#dfe5ec] bg-[#f8fafc] px-3 py-2 text-sm font-medium text-[#425166]">
-          <input name="etaUnbekannt" type="checkbox" defaultChecked={deal?.etaUnbekannt ?? false} />
-          ETA bewusst unbekannt
-        </label>
         <Field name="bearbeitenBis" label="Bearbeiten bis" type="date" required defaultValue={inputDate(deal?.bearbeitenBis)} />
-        <Field name="crdZeitfenster" label="CRD / Zeitfenster" defaultValue={deal?.crdZeitfenster} />
+      </div>
+
+      <SectionTitle icon={<Ship size={17} />} title="POs und Termine" />
+      <div className="grid gap-3 xl:grid-cols-2">
+        <PoInputBlock
+          title="PO Mass Production"
+          poName="po"
+          poValue={deal?.po}
+          etdName="etd"
+          etdValue={deal?.etd}
+          etaName="eta"
+          etaValue={deal?.eta}
+          required
+          etaUnknownName="etaUnbekannt"
+          etaUnknown={deal?.etaUnbekannt}
+        />
+        <PoInputBlock
+          title="PO Drittlandsware"
+          poName="drittlandswarePo"
+          poValue={deal?.drittlandswarePo}
+          etdName="drittlandswareEtd"
+          etdValue={deal?.drittlandswareEtd}
+          etaName="drittlandswareEta"
+          etaValue={deal?.drittlandswareEta}
+        />
+        <PoInputBlock
+          title="PO Fotomuster"
+          poName="fotomusterPo"
+          poValue={deal?.fotomusterPo}
+          etdName="fotomusterEtd"
+          etdValue={deal?.fotomusterEtd}
+          etaName="fotomusterEta"
+          etaValue={deal?.fotomusterEta}
+        />
+        <PoInputBlock
+          title="PO QS Muster"
+          poName="qsMusterPo"
+          poValue={deal?.qsMusterPo}
+          etdName="qsMusterEtd"
+          etdValue={deal?.qsMusterEtd}
+          etaName="qsMusterEta"
+          etaValue={deal?.qsMusterEta}
+        />
+        <PoInputBlock
+          title="PO Serviceware"
+          poName="servicewarePo"
+          poValue={deal?.servicewarePo}
+          etdName="servicewareEtd"
+          etdValue={deal?.servicewareEtd}
+          etaName="servicewareEta"
+          etaValue={deal?.servicewareEta}
+        />
+      </div>
+
+      <SectionTitle icon={<Hourglass size={17} />} title="Status und Zuständigkeit" />
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <Select name="status" label="Aktueller Status" options={dealStatuses} labels={statusLabels} defaultValue={deal?.status ?? "NEU"} />
+        <Select name="priority" label="Priorität" options={priorities} labels={priorityLabels} defaultValue={deal?.priority ?? "NORMAL"} />
+        <Select name="riskStatus" label="Risiko" options={riskStatuses} labels={riskLabels} defaultValue={deal?.riskStatus ?? "NIEDRIG"} />
+        <Select name="wartetAuf" label="Wartet auf" options={waitTargets} labels={waitTargetLabels} defaultValue={deal?.wartetAuf ?? "KEIN_BLOCKER"} />
+        <Field name="wartetAufNotiz" label="Worauf warte ich konkret?" defaultValue={deal?.wartetAufNotiz} />
+      </div>
+
+      <SectionTitle icon={<PackageCheck size={17} />} title="Logistik und Partner" />
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <Field name="drittlaender" label="Drittländer" defaultValue={deal?.drittlaender} />
         <Field name="lieferant" label="Lieferant" defaultValue={deal?.lieferant} />
         <Field name="lieferantKontakt" label="Kontakt Lieferant" defaultValue={deal?.lieferantKontakt} />
         <Field name="spedition" label="Spedition / Forwarder" defaultValue={deal?.spedition} />
@@ -672,13 +794,21 @@ function DealForm({
         <Field name="zahlungsstatus" label="Zahlungsstatus" defaultValue={deal?.zahlungsstatus} />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Select name="status" label="Status" options={dealStatuses} labels={statusLabels} defaultValue={deal?.status ?? "NEU"} />
-        <Select name="priority" label="Priorität" options={priorities} labels={priorityLabels} defaultValue={deal?.priority ?? "NORMAL"} />
-        <Select name="riskStatus" label="Risiko" options={riskStatuses} labels={riskLabels} defaultValue={deal?.riskStatus ?? "NIEDRIG"} />
-        <Select name="wartetAuf" label="Wartet auf" options={waitTargets} labels={waitTargetLabels} defaultValue={deal?.wartetAuf ?? "KEIN_BLOCKER"} />
+      <SectionTitle icon={<FileCheck2 size={17} />} title="Prozessdokumente" />
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <Select name="dokumentenDrafts" label="Dokumenten Drafts" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.dokumentenDrafts ?? "FEHLT"} />
+        <Select name="verschiffungspapiere" label="Verschiffungspapiere" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.verschiffungspapiere ?? "FEHLT"} />
+        <Select name="telexBl" label="Telex B/L" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.telexBl ?? "FEHLT"} />
+        <Select name="proformaDrittlandsware" label="Proforma Rechnung Drittlandsware" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.proformaDrittlandsware ?? "FEHLT"} />
+        <Select name="inspektion100" label="100% Inspektion" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.inspektion100 ?? "FEHLT"} />
+        <Select name="shipmentRelease" label="Shipment Release" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.shipmentRelease ?? "FEHLT"} />
+        <Select name="releaseDocument" label="Release Document" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.releaseDocument ?? "FEHLT"} />
+        <Select name="h1Document" label="H1 Document" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.h1Document ?? "FEHLT"} />
+        <Select name="t1Document" label="T1 Document" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.t1Document ?? "FEHLT"} />
+        <Select name="entladebericht" label="Entladebericht" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.entladebericht ?? "FEHLT"} />
       </div>
 
+      <SectionTitle icon={<FileCheck2 size={17} />} title="Weitere Zoll- und Qualitätsdokumente" />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Select name="commercialInvoice" label="Commercial Invoice" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.commercialInvoice ?? "FEHLT"} />
         <Select name="packingList" label="Packing List" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.packingList ?? "FEHLT"} />
@@ -691,7 +821,7 @@ function DealForm({
 
       <div className="grid gap-3 lg:grid-cols-2">
         <Textarea name="naechsterSchritt" label="Nächster Schritt" required defaultValue={deal?.naechsterSchritt} />
-        <Textarea name="notizenKurz" label="Notizen" defaultValue={deal?.notizenKurz} />
+        <Textarea name="notizenKurz" label="Aktueller Status / allgemeine Notizen" defaultValue={deal?.notizenKurz} />
       </div>
 
       <button className="h-11 rounded-md bg-[#17202c] px-4 text-sm font-semibold text-white" type="submit">
@@ -701,8 +831,77 @@ function DealForm({
   );
 }
 
-function ReminderPopup({ deals }: { deals: DealWithRelations[] }) {
-  if (deals.length === 0) return null;
+function PoInputBlock({
+  title,
+  poName,
+  poValue,
+  etdName,
+  etdValue,
+  etaName,
+  etaValue,
+  required = false,
+  etaUnknownName,
+  etaUnknown = false,
+}: {
+  title: string;
+  poName: string;
+  poValue?: string | null;
+  etdName: string;
+  etdValue?: Date | null;
+  etaName: string;
+  etaValue?: Date | null;
+  required?: boolean;
+  etaUnknownName?: string;
+  etaUnknown?: boolean;
+}) {
+  return (
+    <section className="rounded-md border border-[#dfe5ec] bg-[#f8fafc] p-3">
+      <h3 className="text-sm font-semibold text-[#17202c]">{title}</h3>
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <Field name={poName} label="PO Nummer" required={required} defaultValue={poValue} />
+        <Field name={etdName} label="ETD" type="date" required={required} defaultValue={inputDate(etdValue)} />
+        <Field name={etaName} label="ETA" type="date" defaultValue={inputDate(etaValue)} />
+      </div>
+      {etaUnknownName ? (
+        <label className="mt-3 flex items-center gap-2 text-sm font-medium text-[#425166]">
+          <input name={etaUnknownName} type="checkbox" defaultChecked={etaUnknown} />
+          ETA bewusst unbekannt
+        </label>
+      ) : null}
+    </section>
+  );
+}
+
+function ReminderPanel({ reminders }: { reminders: PoReminder[] }) {
+  return (
+    <section className="rounded-md border border-[#dfe5ec] bg-white">
+      <PanelHeader
+        icon={<BellRing size={18} />}
+        title="PO Erinnerungen"
+        detail="Die Termine werden immer aus dem aktuell gespeicherten ETD-/ETA-Datum berechnet."
+      />
+      {reminders.length === 0 ? (
+        <p className="p-4 text-sm text-[#637389]">Aktuell ist keine PO-Erinnerung fällig.</p>
+      ) : (
+        <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+          {reminders.slice(0, 9).map((reminder) => (
+            <div key={reminder.id} className={clsx("rounded-md border p-3", reminderClass(reminder.tone))}>
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-semibold">{reminder.title}</p>
+                <span className="whitespace-nowrap text-xs font-semibold">{relativeDate(reminder.date)}</span>
+              </div>
+              <p className="mt-1 text-sm">{reminder.deal.marke || reminder.deal.kunde} · {reminder.deal.artikel}</p>
+              <p className="mt-2 text-xs opacity-80">{reminder.detail}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ReminderPopup({ reminders }: { reminders: PoReminder[] }) {
+  if (reminders.length === 0) return null;
 
   return (
     <aside className="fixed bottom-5 left-5 z-30 w-[min(360px,calc(100vw-2.5rem))] rounded-md border border-[#dfe5ec] bg-white p-4 shadow-xl">
@@ -713,19 +912,15 @@ function ReminderPopup({ deals }: { deals: DealWithRelations[] }) {
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-[#17202c]">Erinnerungen</p>
           <p className="mt-1 text-sm text-[#637389]">
-            {deals.length} Deal{deals.length === 1 ? "" : "s"} brauchen Aufmerksamkeit.
+            {reminders.length} PO-Termin{reminders.length === 1 ? "" : "e"} brauchen Aufmerksamkeit.
           </p>
         </div>
       </div>
       <div className="mt-3 space-y-2">
-        {deals.slice(0, 3).map((deal) => (
-          <div key={deal.id} className="rounded-md bg-[#f8fafc] px-3 py-2 text-sm">
-            <p className="font-semibold">{deal.kunde} · {deal.artikel}</p>
-            <p className="mt-1 text-xs text-[#637389]">
-              {!deal.eta && !deal.etaUnbekannt
-                ? "ETA fehlt"
-                : relativeDate(deal.bearbeitenBis) || relativeDate(deal.eta) || "Bitte prüfen"}
-            </p>
+        {reminders.slice(0, 3).map((reminder) => (
+          <div key={reminder.id} className="rounded-md bg-[#f8fafc] px-3 py-2 text-sm">
+            <p className="font-semibold">{reminder.title}</p>
+            <p className="mt-1 text-xs text-[#637389]">{reminder.deal.kunde} · {reminder.deal.artikel} · {relativeDate(reminder.date)}</p>
           </div>
         ))}
       </div>
@@ -735,6 +930,16 @@ function ReminderPopup({ deals }: { deals: DealWithRelations[] }) {
 
 function DocumentStatusGrid({ deal }: { deal: Deal }) {
   const docs = [
+    ["Dokumenten Drafts", deal.dokumentenDrafts],
+    ["Verschiffungspapiere", deal.verschiffungspapiere],
+    ["Telex B/L", deal.telexBl],
+    ["Proforma Drittlandsware", deal.proformaDrittlandsware],
+    ["100% Inspektion", deal.inspektion100],
+    ["Shipment Release", deal.shipmentRelease],
+    ["Release Document", deal.releaseDocument],
+    ["H1 Document", deal.h1Document],
+    ["T1 Document", deal.t1Document],
+    ["Entladebericht", deal.entladebericht],
     ["Commercial Invoice", deal.commercialInvoice],
     ["Packing List", deal.packingList],
     ["BL / AWB", deal.billOfLading],
@@ -981,12 +1186,14 @@ function normalizeSearchParams(params?: Record<string, string | string[] | undef
     status: value("status"),
     ampel: value("ampel"),
     month: value("month"),
+    preset: value("preset"),
   };
 }
 
 function filterDeals(deals: DealWithRelations[], params: Search) {
   const q = (params.q ?? "").toLowerCase();
   const kunde = (params.kunde ?? "").toLowerCase();
+  const preset = (params.preset ?? "").toLowerCase();
 
   return deals.filter((deal) => {
     const haystack = [
@@ -999,6 +1206,10 @@ function filterDeals(deals: DealWithRelations[], params: Search) {
       deal.spedition,
       deal.containerNummer,
       deal.blNummer,
+      deal.drittlandswarePo,
+      deal.fotomusterPo,
+      deal.qsMusterPo,
+      deal.servicewarePo,
     ]
       .filter(Boolean)
       .join(" ")
@@ -1006,6 +1217,7 @@ function filterDeals(deals: DealWithRelations[], params: Search) {
 
     if (q && !haystack.includes(q)) return false;
     if (kunde && !deal.kunde.toLowerCase().includes(kunde)) return false;
+    if (preset && ![deal.kunde, deal.marke].filter(Boolean).some((value) => value?.toLowerCase().includes(preset))) return false;
     if (params.status && deal.status !== params.status) return false;
     if (params.ampel && getTrafficLight(deal) !== params.ampel) return false;
     return true;
@@ -1061,12 +1273,129 @@ function buildCalendarDays(month: Date) {
   });
 }
 
+function getPoSchedules(deal: Deal) {
+  return [
+    {
+      key: "mass-production",
+      label: "Mass Production",
+      shortLabel: "Mass Prod.",
+      number: deal.po,
+      etd: deal.etd,
+      eta: deal.eta,
+      etaUnknown: deal.etaUnbekannt,
+      customsReminder: true,
+    },
+    {
+      key: "drittlandsware",
+      label: "Drittlandsware",
+      shortLabel: "Drittland",
+      number: deal.drittlandswarePo,
+      etd: deal.drittlandswareEtd,
+      eta: deal.drittlandswareEta,
+      etaUnknown: false,
+      customsReminder: true,
+    },
+    {
+      key: "fotomuster",
+      label: "Fotomuster",
+      shortLabel: "Fotomuster",
+      number: deal.fotomusterPo,
+      etd: deal.fotomusterEtd,
+      eta: deal.fotomusterEta,
+      etaUnknown: false,
+      customsReminder: false,
+    },
+    {
+      key: "qs-muster",
+      label: "QS Muster",
+      shortLabel: "QS Muster",
+      number: deal.qsMusterPo,
+      etd: deal.qsMusterEtd,
+      eta: deal.qsMusterEta,
+      etaUnknown: false,
+      customsReminder: false,
+    },
+    {
+      key: "serviceware",
+      label: "Serviceware",
+      shortLabel: "Serviceware",
+      number: deal.servicewarePo,
+      etd: deal.servicewareEtd,
+      eta: deal.servicewareEta,
+      etaUnknown: false,
+      customsReminder: false,
+    },
+  ];
+}
+
+function buildPoReminders(deals: DealWithRelations[]) {
+  const reminders: PoReminder[] = [];
+
+  for (const deal of deals) {
+    if (deal.status === "ABGESCHLOSSEN") continue;
+
+    for (const po of getPoSchedules(deal)) {
+      if (!po.number) continue;
+
+      const etdDays = daysUntil(po.etd);
+      if (po.etd && etdDays !== null && etdDays >= 0 && etdDays <= 3) {
+        reminders.push({
+          id: `${deal.id}-${po.key}-etd`,
+          deal,
+          title: `ETD ${po.label}`,
+          detail: `PO ${po.number}: ETD am ${formatDate(po.etd)} prüfen und Verschiffung absichern.`,
+          date: po.etd,
+          days: etdDays,
+          tone: etdDays === 0 ? "red" : "yellow",
+        });
+      }
+
+      if (!po.customsReminder || !po.eta) continue;
+      const etaDays = daysUntil(po.eta);
+      if (etaDays === null || etaDays < 0) continue;
+
+      if (etaDays <= 14) {
+        reminders.push({
+          id: `${deal.id}-${po.key}-customs`,
+          deal,
+          title: `Verzollung ${po.label}`,
+          detail: `PO ${po.number}: Verzollung für die aktuelle ETA ${formatDate(po.eta)} vorbereiten.`,
+          date: po.eta,
+          days: etaDays,
+          tone: etaDays <= 3 ? "yellow" : "blue",
+        });
+      }
+
+      const h1T1Complete = [deal.h1Document, deal.t1Document].every((status) =>
+        ["ERHALTEN", "GEPRUEFT", "NICHT_NOETIG"].includes(status),
+      );
+
+      if (etaDays <= 3 && !h1T1Complete) {
+        reminders.push({
+          id: `${deal.id}-${po.key}-h1-t1`,
+          deal,
+          title: `H1 + T1 ${po.label}`,
+          detail: `PO ${po.number}: H1- und T1-Dokument für ETA ${formatDate(po.eta)} prüfen.`,
+          date: po.eta,
+          days: etaDays,
+          tone: etaDays === 0 ? "red" : "yellow",
+        });
+      }
+    }
+  }
+
+  return reminders.sort((a, b) => a.days - b.days || a.date.getTime() - b.date.getTime());
+}
+
 function buildEvents(deals: DealWithRelations[]) {
   return deals.flatMap((deal) => {
     const light = getTrafficLight(deal);
+    const poEvents = getPoSchedules(deal).flatMap((po) => [
+      po.number && po.etd ? { key: dateKey(po.etd), type: `${po.shortLabel} ETD`, deal, light } : null,
+      po.number && po.eta ? { key: dateKey(po.eta), type: `${po.shortLabel} ETA`, deal, light } : null,
+    ]);
     return [
-      deal.etd ? { key: dateKey(deal.etd), type: "ETD", deal, light } : null,
-      deal.eta ? { key: dateKey(deal.eta), type: "ETA", deal, light } : null,
+      ...poEvents,
       deal.bearbeitenBis ? { key: dateKey(deal.bearbeitenBis), type: "To-do", deal, light } : null,
     ].filter(Boolean) as { key: string; type: string; deal: DealWithRelations; light: "green" | "yellow" | "red" }[];
   });
@@ -1111,4 +1440,10 @@ function signalClass(tone: "red" | "yellow" | "neutral") {
   if (tone === "red") return "bg-rose-50 text-rose-700";
   if (tone === "yellow") return "bg-amber-50 text-amber-700";
   return "bg-sky-50 text-sky-700";
+}
+
+function reminderClass(tone: "red" | "yellow" | "blue") {
+  if (tone === "red") return "border-rose-200 bg-rose-50 text-rose-800";
+  if (tone === "yellow") return "border-amber-200 bg-amber-50 text-amber-800";
+  return "border-sky-200 bg-sky-50 text-sky-800";
 }

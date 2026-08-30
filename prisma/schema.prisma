@@ -52,54 +52,74 @@ enum RiskStatus {
 }
 
 model Deal {
-  id                 String         @id @default(cuid())
-  kunde              String
-  marke              String?
-  artikel            String
-  stueckzahl         String?
-  preis              String?
-  warenwert          String?
-  marge              String?
-  dealnummer         String?
-  liefertermin       String?
-  po                 String?
-  drittlandswarePo   String?
-  drittlaender       String?
-  fotomusterPo       String?
-  qsMusterPo         String?
-  servicewarePo      String?
-  etd                DateTime?
-  eta                DateTime?
-  etaUnbekannt       Boolean        @default(false)
-  crdZeitfenster     String?
-  status             DealStatus     @default(NEU)
-  priority           DealPriority   @default(NORMAL)
-  riskStatus         RiskStatus     @default(NIEDRIG)
-  wartetAuf          WaitTarget     @default(KEIN_BLOCKER)
-  naechsterSchritt   String?
-  bearbeitenBis      DateTime?
-  lieferant          String?
-  lieferantKontakt   String?
-  spedition          String?
-  speditionKontakt   String?
-  incoterm           String?
-  pol                String?
-  pod                String?
-  containerNummer    String?
-  blNummer           String?
-  zahlungsstatus     String?
-  commercialInvoice  DocumentStatus @default(FEHLT)
-  packingList        DocumentStatus @default(FEHLT)
-  billOfLading       DocumentStatus @default(FEHLT)
-  ursprungsnachweis  DocumentStatus @default(FEHLT)
-  hsCode             DocumentStatus @default(FEHLT)
-  ceDokumente        DocumentStatus @default(NICHT_NOETIG)
-  pruefberichte      DocumentStatus @default(NICHT_NOETIG)
-  notizenKurz        String?
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  notes              DealNote[]
-  changes            DealChange[]
+  id                     String         @id @default(cuid())
+  kunde                  String
+  marke                  String?
+  artikel                String
+  stueckzahl             String?
+  preis                  String?
+  warenwert              String?
+  marge                  String?
+  dealnummer             String?
+  ausmusterung           String?
+  liefertermin           String?
+  po                     String?
+  drittlandswarePo       String?
+  drittlandswareEtd      DateTime?
+  drittlandswareEta      DateTime?
+  drittlaender           String?
+  fotomusterPo           String?
+  fotomusterEtd          DateTime?
+  fotomusterEta          DateTime?
+  qsMusterPo             String?
+  qsMusterEtd            DateTime?
+  qsMusterEta            DateTime?
+  servicewarePo          String?
+  servicewareEtd         DateTime?
+  servicewareEta         DateTime?
+  etd                    DateTime?
+  eta                    DateTime?
+  etaUnbekannt           Boolean        @default(false)
+  crdZeitfenster         String?
+  status                 DealStatus     @default(NEU)
+  priority               DealPriority   @default(NORMAL)
+  riskStatus             RiskStatus     @default(NIEDRIG)
+  wartetAuf              WaitTarget     @default(KEIN_BLOCKER)
+  wartetAufNotiz         String?
+  naechsterSchritt       String?
+  bearbeitenBis          DateTime?
+  lieferant              String?
+  lieferantKontakt       String?
+  spedition              String?
+  speditionKontakt       String?
+  incoterm               String?
+  pol                    String?
+  pod                    String?
+  containerNummer        String?
+  blNummer               String?
+  zahlungsstatus         String?
+  commercialInvoice      DocumentStatus @default(FEHLT)
+  packingList            DocumentStatus @default(FEHLT)
+  billOfLading           DocumentStatus @default(FEHLT)
+  ursprungsnachweis      DocumentStatus @default(FEHLT)
+  hsCode                 DocumentStatus @default(FEHLT)
+  ceDokumente            DocumentStatus @default(NICHT_NOETIG)
+  pruefberichte          DocumentStatus @default(NICHT_NOETIG)
+  dokumentenDrafts       DocumentStatus @default(FEHLT)
+  verschiffungspapiere   DocumentStatus @default(FEHLT)
+  telexBl                DocumentStatus @default(FEHLT)
+  proformaDrittlandsware DocumentStatus @default(FEHLT)
+  inspektion100          DocumentStatus @default(FEHLT)
+  shipmentRelease        DocumentStatus @default(FEHLT)
+  releaseDocument        DocumentStatus @default(FEHLT)
+  h1Document             DocumentStatus @default(FEHLT)
+  t1Document             DocumentStatus @default(FEHLT)
+  entladebericht         DocumentStatus @default(FEHLT)
+  notizenKurz            String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  notes                  DealNote[]
+  changes                DealChange[]
 
   @@index([kunde])
   @@index([status])
