@@ -77,6 +77,11 @@ model Deal {
   servicewarePo          String?
   servicewareEtd         DateTime?
   servicewareEta         DateTime?
+  poMassProductionDone   Boolean        @default(false)
+  poDrittlandswareDone   Boolean        @default(false)
+  poFotomusterDone       Boolean        @default(false)
+  poQsMusterDone         Boolean        @default(false)
+  poServicewareDone      Boolean        @default(false)
   etd                    DateTime?
   eta                    DateTime?
   etaUnbekannt           Boolean        @default(false)

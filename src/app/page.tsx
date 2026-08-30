@@ -21,7 +21,8 @@ import {
 import Link from "next/link";
 import { Fragment } from "react";
 import clsx from "clsx";
-import { addNote, createDeal, deleteDeal, updateDeal } from "@/app/actions";
+import { addNote, createDeal, deleteDeal, setPoCompleted, updateDeal } from "@/app/actions";
+import { PoCompletionCheckbox } from "@/app/po-completion-checkbox";
 import {
   daysUntil,
   dealStatuses,
@@ -109,14 +110,14 @@ export default async function Home({
   const poReminders = buildPoReminders(deals);
 
   return (
-    <main className="min-h-screen bg-[#f4f6f8] text-[#17202c]">
+    <main className="min-h-screen bg-[#FFC9D7] text-[#17202c]">
       <header className="border-b border-[#dde4ec] bg-white/95">
         <div className="mx-auto max-w-[1560px] px-5 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-sm font-medium text-[#637389]">Verzollung CRM · Einkauf 2026</p>
               <h1 className="mt-1 text-3xl font-semibold tracking-normal text-[#17202c]">
-                China Deals, PO- und Fristen-Cockpit
+                China Deals - Übersicht
               </h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -203,7 +204,7 @@ export default async function Home({
 
 function LoginScreen() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f4f6f8] px-5">
+    <main className="flex min-h-screen items-center justify-center bg-[#FFC9D7] px-5">
       <section className="w-full max-w-md rounded-md border border-[#dfe4ea] bg-white p-6">
         <p className="text-sm font-medium text-[#637389]">Verzollung CRM</p>
         <h1 className="mt-2 text-2xl font-semibold text-[#17202c]">Bitte anmelden</h1>
@@ -447,13 +448,13 @@ function CompactDealTable({
                 >
                   <td className="min-w-[300px] px-3 py-4">
                     <div className="space-y-1.5 font-semibold leading-5 text-[#7a284f]">
-                      <p>Marke: {deal.marke || "-"}</p>
-                      <p>Kunde: {deal.kunde}</p>
-                      <p>LIDL Deal: {deal.dealnummer || "-"}</p>
-                      <p>Ausmusterung: {deal.ausmusterung || "-"}</p>
-                      <p className="whitespace-pre-line">Artikel: {deal.artikel}</p>
-                      <p>Liefertermin: {deal.liefertermin || "-"}</p>
-                      <p>CRD Window: {deal.crdZeitfenster || "-"}</p>
+                      <p>{deal.marke || "-"}</p>
+                      <p>{deal.kunde}</p>
+                      <p>{deal.dealnummer || "-"}</p>
+                      <p>{deal.ausmusterung || "-"}</p>
+                      <p className="whitespace-pre-line">{deal.artikel}</p>
+                      <p>LT: {deal.liefertermin || "-"}</p>
+                      <p>CRD: {deal.crdZeitfenster || "-"}</p>
                     </div>
                   </td>
                   <td className="px-3 py-4">
@@ -507,7 +508,10 @@ function PoOverview({ deal }: { deal: Deal }) {
   return (
     <div className="grid gap-2">
       {getPoSchedules(deal).map((po) => (
-        <div key={po.key} className="grid grid-cols-[112px_1fr] gap-2 rounded-md bg-[#f8fafc] px-2 py-1.5 text-xs">
+        <div
+          key={po.key}
+          className="grid grid-cols-[112px_1fr_auto] items-center gap-2 rounded-md border border-transparent bg-[#f8fafc] px-2 py-1.5 text-xs transition-colors has-[input:checked]:border-emerald-200 has-[input:checked]:bg-emerald-100"
+        >
           <span className="font-semibold text-[#425166]">{po.shortLabel}</span>
           <span className="min-w-0">
             <span className="block truncate font-semibold text-[#17202c]">PO {po.number || "-"}</span>
@@ -515,6 +519,11 @@ function PoOverview({ deal }: { deal: Deal }) {
               ETD {formatDate(po.etd) || "-"} · ETA {formatDate(po.eta) || (po.etaUnknown ? "bewusst offen" : "-")}
             </span>
           </span>
+          <PoCompletionCheckbox
+            action={setPoCompleted.bind(null, deal.id, po.key)}
+            checked={po.completed}
+            label={`${po.label} erledigt`}
+          />
         </div>
       ))}
     </div>
@@ -1136,6 +1145,7 @@ function getPoSchedules(deal: Deal) {
       eta: deal.eta,
       etaUnknown: deal.etaUnbekannt,
       customsReminder: true,
+      completed: deal.poMassProductionDone,
     },
     {
       key: "drittlandsware",
@@ -1146,6 +1156,7 @@ function getPoSchedules(deal: Deal) {
       eta: deal.drittlandswareEta,
       etaUnknown: false,
       customsReminder: true,
+      completed: deal.poDrittlandswareDone,
     },
     {
       key: "fotomuster",
@@ -1156,6 +1167,7 @@ function getPoSchedules(deal: Deal) {
       eta: deal.fotomusterEta,
       etaUnknown: false,
       customsReminder: false,
+      completed: deal.poFotomusterDone,
     },
     {
       key: "qs-muster",
@@ -1166,6 +1178,7 @@ function getPoSchedules(deal: Deal) {
       eta: deal.qsMusterEta,
       etaUnknown: false,
       customsReminder: false,
+      completed: deal.poQsMusterDone,
     },
     {
       key: "serviceware",
@@ -1176,6 +1189,7 @@ function getPoSchedules(deal: Deal) {
       eta: deal.servicewareEta,
       etaUnknown: false,
       customsReminder: false,
+      completed: deal.poServicewareDone,
     },
   ];
 }

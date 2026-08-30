@@ -160,6 +160,32 @@ export async function addNote(dealId: string, formData: FormData) {
   revalidatePath("/");
 }
 
+export async function setPoCompleted(dealId: string, poKey: string, formData: FormData) {
+  await requireUser();
+  const completed = checkbox(formData, "completed");
+
+  const data = (() => {
+    switch (poKey) {
+      case "mass-production":
+        return { poMassProductionDone: completed };
+      case "drittlandsware":
+        return { poDrittlandswareDone: completed };
+      case "fotomuster":
+        return { poFotomusterDone: completed };
+      case "qs-muster":
+        return { poQsMusterDone: completed };
+      case "serviceware":
+        return { poServicewareDone: completed };
+      default:
+        return null;
+    }
+  })();
+
+  if (!data) return;
+  await prisma.deal.update({ where: { id: dealId }, data });
+  revalidatePath("/");
+}
+
 function stringifyChangeValue(value: string | Date | null | undefined) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);

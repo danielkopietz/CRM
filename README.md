@@ -35,6 +35,7 @@ Die Uebersicht ist als Arbeitsliste fuer internationale Einkaeufer aufgebaut:
 - Unvollstaendige Deals koennen gespeichert und spaeter ergaenzt werden; fehlende ETA bleibt sichtbar
 - Kompakte Keyfacts-Spalte fuer Marke, Kunde, Dealnummer, Ausmusterung, Artikel, Liefertermin und CRD Window
 - Mehrzeilige Artikelangaben sowie eine breite Erfassungsansicht ohne horizontal abgeschnittene Inhalte
+- Dauerhaft speicherbare Erledigt-Checkboxen fuer jede PO-Zeile in der Uebersicht
 - Dezente Reminder-Box unten links fuer Deals, die Aufmerksamkeit brauchen
 
 ## Lokale Entwicklung

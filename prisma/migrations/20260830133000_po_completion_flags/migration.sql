@@ -1,0 +1,6 @@
+ALTER TABLE "Deal"
+ADD COLUMN "poMassProductionDone" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "poDrittlandswareDone" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "poFotomusterDone" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "poQsMusterDone" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "poServicewareDone" BOOLEAN NOT NULL DEFAULT false;
