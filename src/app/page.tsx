@@ -25,21 +25,12 @@ import { addNote, createDeal, deleteDeal, quickUpdateDeal, updateDeal } from "@/
 import {
   daysUntil,
   dealStatuses,
-  documentStatuses,
-  documentStatusLabels,
   formatDate,
-  getRiskLight,
   getTrafficLight,
   inputDate,
   isWithinDays,
-  priorityLabels,
-  priorities,
-  riskLabels,
-  riskStatuses,
   statusLabels,
   trafficLightLabel,
-  waitTargetLabels,
-  waitTargets,
 } from "@/lib/deals";
 import { getSessionUser, isAuthConfigured } from "@/lib/auth0";
 import { prisma } from "@/lib/prisma";
@@ -105,7 +96,7 @@ export default async function Home({
   const filteredDeals = filterDeals(deals, params);
   const criticalDeals = sortByUrgency(deals).filter((deal) => {
     const light = getTrafficLight(deal);
-    return light === "red" || light === "yellow" || deal.wartetAuf !== "KEIN_BLOCKER";
+    return light === "red" || light === "yellow";
   });
 
   const redDeals = deals.filter((deal) => getTrafficLight(deal) === "red");
@@ -113,7 +104,6 @@ export default async function Home({
   const etaWeek = deals.filter((deal) => getPoSchedules(deal).some((po) => po.number && isWithinDays(po.eta, 7)));
   const etdWeek = deals.filter((deal) => getPoSchedules(deal).some((po) => po.number && isWithinDays(po.etd, 7)));
   const dueToday = deals.filter((deal) => daysUntil(deal.bearbeitenBis) === 0);
-  const blocked = deals.filter((deal) => deal.wartetAuf !== "KEIN_BLOCKER");
   const missingEta = deals.filter((deal) => !deal.eta && !deal.etaUnbekannt);
   const poReminders = buildPoReminders(deals);
 
@@ -125,7 +115,7 @@ export default async function Home({
             <div>
               <p className="text-sm font-medium text-[#637389]">Verzollung CRM · Einkauf 2026</p>
               <h1 className="mt-1 text-3xl font-semibold tracking-normal text-[#17202c]">
-                China Deals, Fristen und Risiko-Cockpit
+                China Deals, PO- und Fristen-Cockpit
               </h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -182,7 +172,6 @@ export default async function Home({
             etaWeek={etaWeek}
             etdWeek={etdWeek}
             dueToday={dueToday}
-            blocked={blocked}
             missingEta={missingEta}
             poReminders={poReminders}
             params={params}
@@ -201,7 +190,7 @@ function LoginScreen() {
         <p className="text-sm font-medium text-[#637389]">Verzollung CRM</p>
         <h1 className="mt-2 text-2xl font-semibold text-[#17202c]">Bitte anmelden</h1>
         <p className="mt-3 text-sm leading-6 text-[#637389]">
-          Nach dem Login siehst du alle Deals, Fristen, Blocker und Notizen.
+          Nach dem Login siehst du alle Deals, PO-Termine, Dokumente und Notizen.
         </p>
         <a
           href="/auth/login"
@@ -222,7 +211,6 @@ function DashboardView({
   etaWeek,
   etdWeek,
   dueToday,
-  blocked,
   missingEta,
   poReminders,
   params,
@@ -234,7 +222,6 @@ function DashboardView({
   etaWeek: DealWithRelations[];
   etdWeek: DealWithRelations[];
   dueToday: DealWithRelations[];
-  blocked: DealWithRelations[];
   missingEta: DealWithRelations[];
   poReminders: PoReminder[];
   params: Search;
@@ -253,37 +240,14 @@ function DashboardView({
 
       <ReminderPanel reminders={poReminders} />
 
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <section className="rounded-md border border-[#dfe5ec] bg-white">
-          <PanelHeader
-            icon={<TrendingUp size={18} />}
-            title="Heute handeln"
-            detail="Fehlende ETA, kritische Deals, Blocker und Fristen zuerst"
-          />
-          <CompactDealTable deals={criticalDeals.slice(0, 10)} empty="Aktuell brennt nichts." />
-        </section>
-
-        <section className="rounded-md border border-[#dfe5ec] bg-white">
-          <PanelHeader icon={<Hourglass size={18} />} title="Wartet auf" detail="Nachfassliste" />
-          <div className="divide-y divide-[#edf1f5]">
-            {blocked.length === 0 ? (
-              <p className="p-4 text-sm text-[#637389]">Keine Blocker eingetragen.</p>
-            ) : (
-              blocked.slice(0, 8).map((deal) => (
-                <div key={deal.id} className="p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-[#17202c]">{deal.kunde} · {deal.artikel}</p>
-                    <span className="rounded-md bg-[#fff5df] px-2 py-1 text-xs font-semibold text-[#946100]">
-                      {waitTargetLabels[deal.wartetAuf]}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-[#637389]">{deal.naechsterSchritt || "Kein nächster Schritt gepflegt."}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-      </div>
+      <section className="rounded-md border border-[#dfe5ec] bg-white">
+        <PanelHeader
+          icon={<TrendingUp size={18} />}
+          title="Heute handeln"
+          detail="Fehlende ETA, kritische Deals und Fristen zuerst"
+        />
+        <CompactDealTable deals={criticalDeals.slice(0, 10)} empty="Aktuell brennt nichts." />
+      </section>
 
       <DealsView deals={filterDeals(allDeals, params)} allDeals={allDeals} params={params} embedded />
     </>
@@ -439,25 +403,22 @@ function CompactDealTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1480px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[1320px] border-collapse text-left text-sm">
         <thead className="bg-[#f8fafc] text-xs font-semibold uppercase text-[#637389]">
           <tr>
-            <th className="px-4 py-3">Ampel</th>
             <th className="px-4 py-3">Marke / LIDL Deal</th>
             <th className="px-4 py-3">Artikel / Lieferung</th>
             <th className="px-4 py-3">Menge / Preis</th>
             <th className="px-4 py-3">POs mit ETD / ETA</th>
             <th className="px-4 py-3">Bearbeiten</th>
-            <th className="px-4 py-3">Wartet auf</th>
-            <th className="px-4 py-3">Risiko</th>
             <th className="px-4 py-3">Nächster Schritt</th>
             <th className="px-4 py-3">Aktion</th>
+            <th className="px-4 py-3 text-right">Ampel</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[#edf1f5]">
           {deals.map((deal) => {
             const light = getTrafficLight(deal);
-            const risk = getRiskLight(deal);
             return (
               <Fragment key={deal.id}>
                 <tr
@@ -468,24 +429,15 @@ function CompactDealTable({
                   )}
                 >
                   <td className="px-3 py-4">
-                    <span className={clsx("inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold", badgeClass(light))}>
-                      <span className={clsx("h-2 w-2 rounded-full", lightDot(light))} />
-                      {trafficLightLabel(light)}
-                    </span>
-                    <DealSignals deal={deal} />
-                  </td>
-                  <td className="px-3 py-4">
                     <p className="font-semibold text-[#17202c]">{deal.marke || "Marke fehlt"}</p>
-                    <p className="mt-1 text-xs text-[#637389]">
-                      {deal.kunde} · {statusLabels[deal.status]} · {priorityLabels[deal.priority]}
-                    </p>
-                    <p className="mt-2 text-xs font-semibold text-[#425166]">LIDL Deal {deal.dealnummer || "-"}</p>
+                    <p className="mt-1 text-xs text-[#637389]">{deal.kunde}</p>
+                    <p className="mt-2 font-semibold text-[#17202c]">LIDL Deal {deal.dealnummer || "-"}</p>
                     <p className="mt-1 text-xs text-[#637389]">Ausmusterung: {deal.ausmusterung || "-"}</p>
                   </td>
                   <td className="px-3 py-4">
                     <p className="font-semibold text-[#17202c]">{deal.artikel}</p>
-                    <p className="mt-1 text-xs text-[#637389]">Liefertermin: {deal.liefertermin || "-"}</p>
-                    <p className="mt-1 text-xs text-[#637389]">CRD Window: {deal.crdZeitfenster || "-"}</p>
+                    <p className="mt-2 font-semibold text-[#17202c]">Liefertermin: {deal.liefertermin || "-"}</p>
+                    <p className="mt-1 font-semibold text-[#17202c]">CRD Window: {deal.crdZeitfenster || "-"}</p>
                   </td>
                   <td className="px-3 py-4">
                     <p>{deal.stueckzahl || "-"}</p>
@@ -496,15 +448,6 @@ function CompactDealTable({
                   <td className="px-3 py-4">
                     <p>{formatDate(deal.bearbeitenBis) || "-"}</p>
                     <p className="text-xs text-[#637389]">{relativeDate(deal.bearbeitenBis)}</p>
-                  </td>
-                  <td className="max-w-[180px] px-3 py-4">
-                    <p>{waitTargetLabels[deal.wartetAuf]}</p>
-                    <p className="mt-1 text-xs text-[#637389]">{deal.wartetAufNotiz || "-"}</p>
-                  </td>
-                  <td className="px-3 py-4">
-                    <span className={clsx("rounded-md px-2 py-1 text-xs font-semibold", badgeClass(risk))}>
-                      {riskLabels[deal.riskStatus]}
-                    </span>
                   </td>
                   <td className="max-w-[240px] px-3 py-4">
                     <p className="line-clamp-3 text-[#425166]">{deal.naechsterSchritt || "-"}</p>
@@ -519,17 +462,24 @@ function CompactDealTable({
                       </Link>
                     )}
                   </td>
+                  <td className="px-3 py-4 text-right">
+                    <span className={clsx("inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold", badgeClass(light))}>
+                      <span className={clsx("h-2 w-2 rounded-full", lightDot(light))} />
+                      {trafficLightLabel(light)}
+                    </span>
+                    <DealSignals deal={deal} />
+                  </td>
                 </tr>
                 {showDetails ? (
                   <tr key={`${deal.id}-quick-actions`} className="bg-white">
-                    <td colSpan={10} className="px-3 pb-4">
+                    <td colSpan={8} className="px-3 pb-4">
                       <QuickActionBar deal={deal} />
                     </td>
                   </tr>
                 ) : null}
                 {showDetails ? (
                   <tr key={`${deal.id}-details`} className="bg-white">
-                    <td colSpan={10} className="px-3 pb-5">
+                    <td colSpan={8} className="px-3 pb-5">
                       <DealDetails deal={deal} />
                     </td>
                   </tr>
@@ -590,7 +540,7 @@ function DealDetails({ deal }: { deal: DealWithRelations }) {
 function QuickActionBar({ deal }: { deal: DealWithRelations }) {
   return (
     <div className="rounded-md border border-[#dfe5ec] bg-[#f8fafc] p-3">
-      <div className="grid gap-3 xl:grid-cols-[1fr_1.4fr_1fr_auto]">
+      <div className="grid gap-3 xl:grid-cols-[1fr_1.4fr_auto]">
         <form action={quickUpdateDeal.bind(null, deal.id)} className="flex flex-wrap items-end gap-2">
           <input type="hidden" name="quickAction" value="eta" />
           <label className="grid gap-1 text-xs font-semibold text-[#637389]">
@@ -636,27 +586,6 @@ function QuickActionBar({ deal }: { deal: DealWithRelations }) {
           </button>
         </form>
 
-        <form action={quickUpdateDeal.bind(null, deal.id)} className="flex flex-wrap items-end gap-2">
-          <input type="hidden" name="quickAction" value="waitTarget" />
-          <label className="grid flex-1 gap-1 text-xs font-semibold text-[#637389]">
-            Wartet auf
-            <select
-              name="wartetAuf"
-              defaultValue={deal.wartetAuf}
-              className="h-9 rounded-md border border-[#dfe5ec] bg-white px-2 text-sm outline-none"
-            >
-              {waitTargets.map((target) => (
-                <option key={target} value={target}>
-                  {waitTargetLabels[target]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="h-9 rounded-md bg-[#17202c] px-3 text-sm font-semibold text-white" type="submit">
-            Setzen
-          </button>
-        </form>
-
         <form action={quickUpdateDeal.bind(null, deal.id)} className="flex items-end">
           <input type="hidden" name="quickAction" value="done" />
           <button className="inline-flex h-9 items-center gap-2 rounded-md border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700" type="submit">
@@ -675,13 +604,12 @@ function DealSignals({ deal }: { deal: DealWithRelations }) {
     signalForDate("ETD", deal.etd),
     signalForDate("ETA", deal.eta),
     signalForDate("To-do", deal.bearbeitenBis),
-    deal.wartetAuf !== "KEIN_BLOCKER" ? { label: `Wartet: ${waitTargetLabels[deal.wartetAuf]}`, tone: "yellow" } : null,
   ].filter(Boolean) as { label: string; tone: "red" | "yellow" | "neutral" }[];
 
   if (signals.length === 0) return null;
 
   return (
-    <div className="mt-2 flex max-w-36 flex-wrap gap-1">
+    <div className="mt-2 ml-auto flex max-w-40 flex-wrap justify-end gap-1">
       {signals.slice(0, 3).map((signal) => (
         <span key={signal.label} className={clsx("rounded px-1.5 py-0.5 text-[11px] font-semibold", signalClass(signal.tone))}>
           {signal.label}
@@ -711,11 +639,11 @@ function DealForm({
         <Field name="artikel" label="Artikel" required defaultValue={deal?.artikel} />
         <Field name="liefertermin" label="Liefertermin / KW" defaultValue={deal?.liefertermin} />
         <Field name="crdZeitfenster" label="CRD Window" defaultValue={deal?.crdZeitfenster} />
-        <Field name="stueckzahl" label="Stückzahl" required defaultValue={deal?.stueckzahl} />
+        <Field name="stueckzahl" label="Stückzahl" defaultValue={deal?.stueckzahl} />
         <Field name="preis" label="Preis" defaultValue={deal?.preis} />
         <Field name="warenwert" label="Warenwert" defaultValue={deal?.warenwert} />
         <Field name="marge" label="Marge" defaultValue={deal?.marge} />
-        <Field name="bearbeitenBis" label="Bearbeiten bis" type="date" required defaultValue={inputDate(deal?.bearbeitenBis)} />
+        <Field name="bearbeitenBis" label="Bearbeiten bis" type="date" defaultValue={inputDate(deal?.bearbeitenBis)} />
       </div>
 
       <SectionTitle icon={<Ship size={17} />} title="POs und Termine" />
@@ -728,7 +656,6 @@ function DealForm({
           etdValue={deal?.etd}
           etaName="eta"
           etaValue={deal?.eta}
-          required
           etaUnknownName="etaUnbekannt"
           etaUnknown={deal?.etaUnbekannt}
         />
@@ -770,57 +697,22 @@ function DealForm({
         />
       </div>
 
-      <SectionTitle icon={<Hourglass size={17} />} title="Status und Zuständigkeit" />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <Select name="status" label="Aktueller Status" options={dealStatuses} labels={statusLabels} defaultValue={deal?.status ?? "NEU"} />
-        <Select name="priority" label="Priorität" options={priorities} labels={priorityLabels} defaultValue={deal?.priority ?? "NORMAL"} />
-        <Select name="riskStatus" label="Risiko" options={riskStatuses} labels={riskLabels} defaultValue={deal?.riskStatus ?? "NIEDRIG"} />
-        <Select name="wartetAuf" label="Wartet auf" options={waitTargets} labels={waitTargetLabels} defaultValue={deal?.wartetAuf ?? "KEIN_BLOCKER"} />
-        <Field name="wartetAufNotiz" label="Worauf warte ich konkret?" defaultValue={deal?.wartetAufNotiz} />
-      </div>
-
-      <SectionTitle icon={<PackageCheck size={17} />} title="Logistik und Partner" />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <Field name="drittlaender" label="Drittländer" defaultValue={deal?.drittlaender} />
-        <Field name="lieferant" label="Lieferant" defaultValue={deal?.lieferant} />
-        <Field name="lieferantKontakt" label="Kontakt Lieferant" defaultValue={deal?.lieferantKontakt} />
-        <Field name="spedition" label="Spedition / Forwarder" defaultValue={deal?.spedition} />
-        <Field name="speditionKontakt" label="Kontakt Spedition" defaultValue={deal?.speditionKontakt} />
-        <Field name="incoterm" label="Incoterm" defaultValue={deal?.incoterm} placeholder="FOB, EXW, CIF..." />
-        <Field name="pol" label="POL / Abgangshafen" defaultValue={deal?.pol} />
-        <Field name="pod" label="POD / Zielhafen" defaultValue={deal?.pod} />
-        <Field name="containerNummer" label="Container" defaultValue={deal?.containerNummer} />
-        <Field name="blNummer" label="BL / AWB Nummer" defaultValue={deal?.blNummer} />
-        <Field name="zahlungsstatus" label="Zahlungsstatus" defaultValue={deal?.zahlungsstatus} />
-      </div>
-
       <SectionTitle icon={<FileCheck2 size={17} />} title="Prozessdokumente" />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <Select name="dokumentenDrafts" label="Dokumenten Drafts" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.dokumentenDrafts ?? "FEHLT"} />
-        <Select name="verschiffungspapiere" label="Verschiffungspapiere" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.verschiffungspapiere ?? "FEHLT"} />
-        <Select name="telexBl" label="Telex B/L" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.telexBl ?? "FEHLT"} />
-        <Select name="proformaDrittlandsware" label="Proforma Rechnung Drittlandsware" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.proformaDrittlandsware ?? "FEHLT"} />
-        <Select name="inspektion100" label="100% Inspektion" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.inspektion100 ?? "FEHLT"} />
-        <Select name="shipmentRelease" label="Shipment Release" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.shipmentRelease ?? "FEHLT"} />
-        <Select name="releaseDocument" label="Release Document" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.releaseDocument ?? "FEHLT"} />
-        <Select name="h1Document" label="H1 Document" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.h1Document ?? "FEHLT"} />
-        <Select name="t1Document" label="T1 Document" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.t1Document ?? "FEHLT"} />
-        <Select name="entladebericht" label="Entladebericht" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.entladebericht ?? "FEHLT"} />
-      </div>
-
-      <SectionTitle icon={<FileCheck2 size={17} />} title="Weitere Zoll- und Qualitätsdokumente" />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Select name="commercialInvoice" label="Commercial Invoice" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.commercialInvoice ?? "FEHLT"} />
-        <Select name="packingList" label="Packing List" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.packingList ?? "FEHLT"} />
-        <Select name="billOfLading" label="Bill of Lading / AWB" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.billOfLading ?? "FEHLT"} />
-        <Select name="ursprungsnachweis" label="Ursprungsnachweis" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.ursprungsnachweis ?? "FEHLT"} />
-        <Select name="hsCode" label="HS Code" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.hsCode ?? "FEHLT"} />
-        <Select name="ceDokumente" label="CE Dokumente" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.ceDokumente ?? "NICHT_NOETIG"} />
-        <Select name="pruefberichte" label="Prüfberichte" options={documentStatuses} labels={documentStatusLabels} defaultValue={deal?.pruefberichte ?? "NICHT_NOETIG"} />
+        <ProcessDocumentCheckbox name="dokumentenDrafts" label="Dokumenten Drafts" status={deal?.dokumentenDrafts} />
+        <ProcessDocumentCheckbox name="verschiffungspapiere" label="Verschiffungspapiere" status={deal?.verschiffungspapiere} />
+        <ProcessDocumentCheckbox name="telexBl" label="Telex B/L" status={deal?.telexBl} />
+        <ProcessDocumentCheckbox name="proformaDrittlandsware" label="Proforma Rechnung Drittlandsware" status={deal?.proformaDrittlandsware} />
+        <ProcessDocumentCheckbox name="inspektion100" label="100% Inspektion" status={deal?.inspektion100} />
+        <ProcessDocumentCheckbox name="shipmentRelease" label="Shipment Release" status={deal?.shipmentRelease} />
+        <ProcessDocumentCheckbox name="releaseDocument" label="Release Document" status={deal?.releaseDocument} />
+        <ProcessDocumentCheckbox name="h1Document" label="H1 Document" status={deal?.h1Document} />
+        <ProcessDocumentCheckbox name="t1Document" label="T1 Document" status={deal?.t1Document} />
+        <ProcessDocumentCheckbox name="entladebericht" label="Entladebericht" status={deal?.entladebericht} />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <Textarea name="naechsterSchritt" label="Nächster Schritt" required defaultValue={deal?.naechsterSchritt} />
+        <Textarea name="naechsterSchritt" label="Nächster Schritt" defaultValue={deal?.naechsterSchritt} />
         <Textarea name="notizenKurz" label="Aktueller Status / allgemeine Notizen" defaultValue={deal?.notizenKurz} />
       </div>
 
@@ -869,6 +761,34 @@ function PoInputBlock({
         </label>
       ) : null}
     </section>
+  );
+}
+
+function ProcessDocumentCheckbox({
+  name,
+  label,
+  status,
+}: {
+  name: string;
+  label: string;
+  status?: Deal["dokumentenDrafts"];
+}) {
+  const checked = Boolean(status && status !== "FEHLT");
+
+  return (
+    <label
+      className="flex min-h-14 cursor-pointer items-center gap-3 rounded-md border border-[#dfe5ec] bg-[#f8fafc] px-3 py-2 text-sm font-semibold text-[#425166] [&:has(input:checked)]:border-emerald-200 [&:has(input:checked)]:bg-emerald-50 [&:has(input:checked)]:text-emerald-800"
+    >
+      <input
+        name={name}
+        type="checkbox"
+        defaultChecked={checked}
+        className="peer h-5 w-5 shrink-0 accent-emerald-600"
+      />
+      <span>{label}</span>
+      <span className="ml-auto text-xs font-semibold text-rose-700 peer-checked:hidden">Fehlt</span>
+      <span className="ml-auto hidden text-xs font-semibold text-emerald-700 peer-checked:inline">Erledigt</span>
+    </label>
   );
 }
 
@@ -940,27 +860,28 @@ function DocumentStatusGrid({ deal }: { deal: Deal }) {
     ["H1 Document", deal.h1Document],
     ["T1 Document", deal.t1Document],
     ["Entladebericht", deal.entladebericht],
-    ["Commercial Invoice", deal.commercialInvoice],
-    ["Packing List", deal.packingList],
-    ["BL / AWB", deal.billOfLading],
-    ["Ursprung", deal.ursprungsnachweis],
-    ["HS Code", deal.hsCode],
-    ["CE", deal.ceDokumente],
-    ["Prüfberichte", deal.pruefberichte],
   ] as const;
 
   return (
     <section className="rounded-md border border-[#dfe5ec] bg-[#f8fafc] p-3">
-      <SectionTitle icon={<FileCheck2 size={16} />} title="Dokumente" />
+      <SectionTitle icon={<FileCheck2 size={16} />} title="Prozessdokumente" />
       <div className="mt-3 grid gap-2">
-        {docs.map(([label, status]) => (
-          <div key={label} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm">
-            <span>{label}</span>
-            <span className={clsx("rounded px-2 py-1 text-xs font-semibold", documentClass(status))}>
-              {documentStatusLabels[status]}
-            </span>
-          </div>
-        ))}
+        {docs.map(([label, status]) => {
+          const complete = status !== "FEHLT";
+          return (
+            <div key={label} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm">
+              <span>{label}</span>
+              <span
+                className={clsx(
+                  "rounded px-2 py-1 text-xs font-semibold",
+                  complete ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+                )}
+              >
+                {complete ? "Erledigt" : "Fehlt"}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -1114,37 +1035,6 @@ function Field({
         placeholder={placeholder}
         className="h-10 rounded-md border border-[#dfe5ec] bg-white px-3 text-sm text-[#17202c] outline-none focus:border-[#4f7cff]"
       />
-    </label>
-  );
-}
-
-function Select<T extends string>({
-  name,
-  label,
-  options,
-  labels,
-  defaultValue,
-}: {
-  name: string;
-  label: string;
-  options: readonly T[];
-  labels: Record<T, string>;
-  defaultValue: T;
-}) {
-  return (
-    <label className="grid gap-1 text-sm font-medium text-[#425166]">
-      {label}
-      <select
-        name={name}
-        defaultValue={defaultValue}
-        className="h-10 rounded-md border border-[#dfe5ec] bg-white px-3 text-sm text-[#17202c] outline-none focus:border-[#4f7cff]"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {labels[option]}
-          </option>
-        ))}
-      </select>
     </label>
   );
 }
@@ -1426,14 +1316,6 @@ function calendarEventClass(light: "green" | "yellow" | "red") {
   if (light === "red") return "bg-rose-50 text-rose-800";
   if (light === "yellow") return "bg-amber-50 text-amber-800";
   return "bg-emerald-50 text-emerald-800";
-}
-
-function documentClass(status: string) {
-  if (status === "FEHLT") return "bg-rose-50 text-rose-700";
-  if (status === "ANGEFRAGT") return "bg-amber-50 text-amber-700";
-  if (status === "ERHALTEN") return "bg-sky-50 text-sky-700";
-  if (status === "GEPRUEFT") return "bg-emerald-50 text-emerald-700";
-  return "bg-[#eef2f5] text-[#637389]";
 }
 
 function signalClass(tone: "red" | "yellow" | "neutral") {

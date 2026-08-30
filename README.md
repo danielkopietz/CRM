@@ -13,10 +13,8 @@ Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsproz
 - Ampel: Gruen, Gelb, Rot
 - Verlauf/Notizen pro Deal
 - Reiter fuer Uebersicht, Kalender und Deals
-- Einkauf-KPIs: Heute faellig, ETA/ETD diese Woche, Blocker und Dokumentenluecken
-- Lieferant, Spedition, Incoterm, POL/POD, Container, BL/AWB und Zahlungsstatus
-- Dokumentenstatus fuer Commercial Invoice, Packing List, BL/AWB, Ursprung, HS Code, CE und Pruefberichte
-- Prozessdokumente fuer Drafts, Verschiffungspapiere, Telex B/L, Proforma Drittlandsware, 100% Inspektion, Shipment Release, Release Document, H1, T1 und Entladebericht
+- Einkauf-KPIs: Heute faellig, ETA/ETD diese Woche und Dokumentenluecken
+- Einfache Erledigt-Checkboxen fuer Drafts, Verschiffungspapiere, Telex B/L, Proforma Drittlandsware, 100% Inspektion, Shipment Release, Release Document, H1, T1 und Entladebericht
 - Automatische Aenderungshistorie fuer Menge, Preis, ETD und ETA
 - Dynamische Erinnerungen drei Tage vor allen ETDs, 14 Tage vor Mass-Production-/Drittlandsware-ETA fuer die Verzollung und drei Tage vor ETA fuer H1/T1
 - Fertige Uebersichten fuer Silvercrest, Sanitas, Kaufland und Hartmann
@@ -33,11 +31,9 @@ Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsproz
 Die Uebersicht ist als Arbeitsliste fuer internationale Einkaeufer aufgebaut:
 
 - Kritische Deals werden zuerst angezeigt
-- Blocker zeigen, ob intern, Lieferant, Spedition, Kunde oder Zoll am Zug ist
 - Kalender zeigt ETD, ETA und interne Bearbeitungsfristen
-- Risikoampel beruecksichtigt manuelles Risiko und fehlende Dokumente
-- Pflichtfelder schuetzen vor unvollstaendigen Deals: Kunde, Artikel, Menge, PO, ETD, ETA oder bewusst unbekannt, Bearbeiten bis, naechster Schritt
-- Quick Actions direkt an der Deal-Zeile fuer ETA, naechsten Schritt, Wartet-auf und Abschluss
+- Unvollstaendige Deals koennen gespeichert und spaeter ergaenzt werden; fehlende ETA bleibt sichtbar
+- Quick Actions direkt an der Deal-Zeile fuer ETA, naechsten Schritt und Abschluss
 - Dezente Reminder-Box unten links fuer Deals, die Aufmerksamkeit brauchen
 
 ## Lokale Entwicklung

@@ -1,6 +1,5 @@
 "use server";
 
-import { DealPriority, DealStatus, DocumentStatus, RiskStatus, WaitTarget } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAuthConfigured, getSessionUser } from "@/lib/auth0";
@@ -26,16 +25,8 @@ function checkbox(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
 
-function requireText(formData: FormData, key: string, label: string) {
-  const value = optionalText(formData, key);
-  if (!value) {
-    throw new Error(`${label} ist ein Pflichtfeld.`);
-  }
-  return value;
-}
-
-function selectValue<T extends string>(formData: FormData, key: string, fallback: T) {
-  return String(formData.get(key) ?? fallback) as T;
+function processDocument(formData: FormData, key: string) {
+  return checkbox(formData, key) ? ("GEPRUEFT" as const) : ("FEHLT" as const);
 }
 
 function dealPayload(formData: FormData) {
@@ -50,34 +41,21 @@ function dealPayload(formData: FormData) {
     throw new Error("Kunde und Artikel sind Pflichtfelder.");
   }
 
-  if (!eta && !etaUnbekannt) {
-    throw new Error("ETA ist ein Pflichtfeld oder muss bewusst als unbekannt markiert werden.");
-  }
-
-  if (!etd) {
-    throw new Error("ETD ist ein Pflichtfeld.");
-  }
-
-  if (!bearbeitenBis) {
-    throw new Error("Bearbeiten bis ist ein Pflichtfeld.");
-  }
-
   return {
     kunde,
     artikel,
     marke: optionalText(formData, "marke"),
-    stueckzahl: requireText(formData, "stueckzahl", "Stückzahl"),
+    stueckzahl: optionalText(formData, "stueckzahl"),
     preis: optionalText(formData, "preis"),
     warenwert: optionalText(formData, "warenwert"),
     marge: optionalText(formData, "marge"),
     dealnummer: optionalText(formData, "dealnummer"),
     ausmusterung: optionalText(formData, "ausmusterung"),
     liefertermin: optionalText(formData, "liefertermin"),
-    po: requireText(formData, "po", "PO Mass Production"),
+    po: optionalText(formData, "po"),
     drittlandswarePo: optionalText(formData, "drittlandswarePo"),
     drittlandswareEtd: optionalDate(formData, "drittlandswareEtd"),
     drittlandswareEta: optionalDate(formData, "drittlandswareEta"),
-    drittlaender: optionalText(formData, "drittlaender"),
     fotomusterPo: optionalText(formData, "fotomusterPo"),
     fotomusterEtd: optionalDate(formData, "fotomusterEtd"),
     fotomusterEta: optionalDate(formData, "fotomusterEta"),
@@ -91,40 +69,18 @@ function dealPayload(formData: FormData) {
     eta,
     etaUnbekannt,
     crdZeitfenster: optionalText(formData, "crdZeitfenster"),
-    status: selectValue<DealStatus>(formData, "status", "NEU"),
-    priority: selectValue<DealPriority>(formData, "priority", "NORMAL"),
-    riskStatus: selectValue<RiskStatus>(formData, "riskStatus", "NIEDRIG"),
-    wartetAuf: selectValue<WaitTarget>(formData, "wartetAuf", "KEIN_BLOCKER"),
-    wartetAufNotiz: optionalText(formData, "wartetAufNotiz"),
-    naechsterSchritt: requireText(formData, "naechsterSchritt", "Nächster Schritt"),
+    naechsterSchritt: optionalText(formData, "naechsterSchritt"),
     bearbeitenBis,
-    lieferant: optionalText(formData, "lieferant"),
-    lieferantKontakt: optionalText(formData, "lieferantKontakt"),
-    spedition: optionalText(formData, "spedition"),
-    speditionKontakt: optionalText(formData, "speditionKontakt"),
-    incoterm: optionalText(formData, "incoterm"),
-    pol: optionalText(formData, "pol"),
-    pod: optionalText(formData, "pod"),
-    containerNummer: optionalText(formData, "containerNummer"),
-    blNummer: optionalText(formData, "blNummer"),
-    zahlungsstatus: optionalText(formData, "zahlungsstatus"),
-    commercialInvoice: selectValue<DocumentStatus>(formData, "commercialInvoice", "FEHLT"),
-    packingList: selectValue<DocumentStatus>(formData, "packingList", "FEHLT"),
-    billOfLading: selectValue<DocumentStatus>(formData, "billOfLading", "FEHLT"),
-    ursprungsnachweis: selectValue<DocumentStatus>(formData, "ursprungsnachweis", "FEHLT"),
-    hsCode: selectValue<DocumentStatus>(formData, "hsCode", "FEHLT"),
-    ceDokumente: selectValue<DocumentStatus>(formData, "ceDokumente", "NICHT_NOETIG"),
-    pruefberichte: selectValue<DocumentStatus>(formData, "pruefberichte", "NICHT_NOETIG"),
-    dokumentenDrafts: selectValue<DocumentStatus>(formData, "dokumentenDrafts", "FEHLT"),
-    verschiffungspapiere: selectValue<DocumentStatus>(formData, "verschiffungspapiere", "FEHLT"),
-    telexBl: selectValue<DocumentStatus>(formData, "telexBl", "FEHLT"),
-    proformaDrittlandsware: selectValue<DocumentStatus>(formData, "proformaDrittlandsware", "FEHLT"),
-    inspektion100: selectValue<DocumentStatus>(formData, "inspektion100", "FEHLT"),
-    shipmentRelease: selectValue<DocumentStatus>(formData, "shipmentRelease", "FEHLT"),
-    releaseDocument: selectValue<DocumentStatus>(formData, "releaseDocument", "FEHLT"),
-    h1Document: selectValue<DocumentStatus>(formData, "h1Document", "FEHLT"),
-    t1Document: selectValue<DocumentStatus>(formData, "t1Document", "FEHLT"),
-    entladebericht: selectValue<DocumentStatus>(formData, "entladebericht", "FEHLT"),
+    dokumentenDrafts: processDocument(formData, "dokumentenDrafts"),
+    verschiffungspapiere: processDocument(formData, "verschiffungspapiere"),
+    telexBl: processDocument(formData, "telexBl"),
+    proformaDrittlandsware: processDocument(formData, "proformaDrittlandsware"),
+    inspektion100: processDocument(formData, "inspektion100"),
+    shipmentRelease: processDocument(formData, "shipmentRelease"),
+    releaseDocument: processDocument(formData, "releaseDocument"),
+    h1Document: processDocument(formData, "h1Document"),
+    t1Document: processDocument(formData, "t1Document"),
+    entladebericht: processDocument(formData, "entladebericht"),
     notizenKurz: optionalText(formData, "notizenKurz"),
   };
 }
@@ -228,19 +184,11 @@ export async function quickUpdateDeal(id: string, formData: FormData) {
     });
   }
 
-  if (type === "waitTarget") {
-    await prisma.deal.update({
-      where: { id },
-      data: { wartetAuf: selectValue<WaitTarget>(formData, "wartetAuf", "KEIN_BLOCKER") },
-    });
-  }
-
   if (type === "done") {
     await prisma.deal.update({
       where: { id },
       data: {
         status: "ABGESCHLOSSEN",
-        wartetAuf: "KEIN_BLOCKER",
         naechsterSchritt: null,
         bearbeitenBis: null,
       },
