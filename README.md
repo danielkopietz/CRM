@@ -33,7 +33,8 @@ Die Uebersicht ist als Arbeitsliste fuer internationale Einkaeufer aufgebaut:
 - Kritische Deals werden zuerst angezeigt
 - Kalender zeigt ETD, ETA und interne Bearbeitungsfristen
 - Unvollstaendige Deals koennen gespeichert und spaeter ergaenzt werden; fehlende ETA bleibt sichtbar
-- Quick Actions direkt an der Deal-Zeile fuer ETA, naechsten Schritt und Abschluss
+- Kompakte Keyfacts-Spalte fuer Marke, Kunde, Dealnummer, Ausmusterung, Artikel, Liefertermin und CRD Window
+- Mehrzeilige Artikelangaben sowie eine breite Erfassungsansicht ohne horizontal abgeschnittene Inhalte
 - Dezente Reminder-Box unten links fuer Deals, die Aufmerksamkeit brauchen
 
 ## Lokale Entwicklung

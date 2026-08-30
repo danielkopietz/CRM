@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   BellRing,
   CalendarClock,
-  CheckCircle2,
   CirclePlus,
   ClipboardList,
   FileCheck2,
@@ -17,11 +16,12 @@ import {
   StickyNote,
   Trash2,
   TrendingUp,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { Fragment } from "react";
 import clsx from "clsx";
-import { addNote, createDeal, deleteDeal, quickUpdateDeal, updateDeal } from "@/app/actions";
+import { addNote, createDeal, deleteDeal, updateDeal } from "@/app/actions";
 import {
   daysUntil,
   dealStatuses,
@@ -50,6 +50,7 @@ type Search = {
   ampel?: string;
   month?: string;
   preset?: string;
+  newDeal?: string;
 };
 
 type PoReminder = {
@@ -119,15 +120,12 @@ export default async function Home({
               </h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <details className="relative">
-                <summary className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-md bg-[#17202c] px-4 text-sm font-semibold text-white">
+              <Link
+                href={`/?tab=${tab}&new=1`}
+                className="inline-flex h-11 items-center gap-2 rounded-md bg-[#17202c] px-4 text-sm font-semibold text-white"
+              >
                   <CirclePlus size={17} /> Neuer Deal
-                </summary>
-                <div className="absolute right-0 z-20 mt-2 max-h-[80vh] w-[min(760px,calc(100vw-2rem))] overflow-auto rounded-md border border-[#d6e0ea] bg-white p-4 shadow-xl">
-                  <SectionTitle icon={<CirclePlus size={18} />} title="Neuen Deal erfassen" />
-                  <DealForm action={createDeal} submitLabel="Deal anlegen" />
-                </div>
-              </details>
+              </Link>
               <div className="rounded-md border border-[#dfe5ec] bg-[#f7f9fb] px-3 py-2 text-sm text-[#425166]">
                 {user?.email ?? "Lokaler Setup-Modus"}
               </div>
@@ -149,6 +147,26 @@ export default async function Home({
           </nav>
         </div>
       </header>
+
+      {params.newDeal ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#17202c]/45 p-4 backdrop-blur-[1px] sm:p-6">
+          <section className="my-auto max-h-[calc(100vh-2rem)] w-full max-w-[1180px] overflow-x-hidden overflow-y-auto rounded-lg border border-[#d6e0ea] bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-[#dfe5ec] bg-white px-5 py-4">
+              <SectionTitle icon={<CirclePlus size={18} />} title="Neuen Deal erfassen" />
+              <Link
+                href={`/?tab=${tab}`}
+                aria-label="Fenster schließen"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[#dfe5ec] text-[#425166] hover:bg-[#f4f6f8]"
+              >
+                <X size={18} />
+              </Link>
+            </div>
+            <div className="p-5">
+              <DealForm action={createDeal} submitLabel="Deal anlegen" />
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       <div className="mx-auto max-w-[1560px] space-y-5 px-5 py-5">
         {!process.env.DATABASE_URL ? (
@@ -403,11 +421,10 @@ function CompactDealTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1320px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[1200px] border-collapse text-left text-sm">
         <thead className="bg-[#f8fafc] text-xs font-semibold uppercase text-[#637389]">
           <tr>
-            <th className="px-4 py-3">Marke / LIDL Deal</th>
-            <th className="px-4 py-3">Artikel / Lieferung</th>
+            <th className="px-4 py-3">Keyfacts</th>
             <th className="px-4 py-3">Menge / Preis</th>
             <th className="px-4 py-3">POs mit ETD / ETA</th>
             <th className="px-4 py-3">Bearbeiten</th>
@@ -428,16 +445,16 @@ function CompactDealTable({
                     light !== "green" && "crm-soft-pulse",
                   )}
                 >
-                  <td className="px-3 py-4">
-                    <p className="font-semibold text-[#17202c]">{deal.marke || "Marke fehlt"}</p>
-                    <p className="mt-1 text-xs text-[#637389]">{deal.kunde}</p>
-                    <p className="mt-2 font-semibold text-[#17202c]">LIDL Deal {deal.dealnummer || "-"}</p>
-                    <p className="mt-1 text-xs text-[#637389]">Ausmusterung: {deal.ausmusterung || "-"}</p>
-                  </td>
-                  <td className="px-3 py-4">
-                    <p className="font-semibold text-[#17202c]">{deal.artikel}</p>
-                    <p className="mt-2 font-semibold text-[#17202c]">Liefertermin: {deal.liefertermin || "-"}</p>
-                    <p className="mt-1 font-semibold text-[#17202c]">CRD Window: {deal.crdZeitfenster || "-"}</p>
+                  <td className="min-w-[300px] px-3 py-4">
+                    <div className="space-y-1.5 font-semibold leading-5 text-[#7a284f]">
+                      <p>Marke: {deal.marke || "-"}</p>
+                      <p>Kunde: {deal.kunde}</p>
+                      <p>LIDL Deal: {deal.dealnummer || "-"}</p>
+                      <p>Ausmusterung: {deal.ausmusterung || "-"}</p>
+                      <p className="whitespace-pre-line">Artikel: {deal.artikel}</p>
+                      <p>Liefertermin: {deal.liefertermin || "-"}</p>
+                      <p>CRD Window: {deal.crdZeitfenster || "-"}</p>
+                    </div>
                   </td>
                   <td className="px-3 py-4">
                     <p>{deal.stueckzahl || "-"}</p>
@@ -455,7 +472,7 @@ function CompactDealTable({
                   </td>
                   <td className="px-3 py-4">
                     {showDetails ? (
-                      <span className="text-sm font-medium text-[#637389]">Quick Actions unten</span>
+                      <span className="text-sm font-medium text-[#637389]">Details unten</span>
                     ) : (
                       <Link href="/?tab=deals" className="font-semibold text-[#244ac8]">
                         Öffnen
@@ -471,15 +488,8 @@ function CompactDealTable({
                   </td>
                 </tr>
                 {showDetails ? (
-                  <tr key={`${deal.id}-quick-actions`} className="bg-white">
-                    <td colSpan={8} className="px-3 pb-4">
-                      <QuickActionBar deal={deal} />
-                    </td>
-                  </tr>
-                ) : null}
-                {showDetails ? (
                   <tr key={`${deal.id}-details`} className="bg-white">
-                    <td colSpan={8} className="px-3 pb-5">
+                    <td colSpan={7} className="px-3 pb-5">
                       <DealDetails deal={deal} />
                     </td>
                   </tr>
@@ -537,66 +547,6 @@ function DealDetails({ deal }: { deal: DealWithRelations }) {
   );
 }
 
-function QuickActionBar({ deal }: { deal: DealWithRelations }) {
-  return (
-    <div className="rounded-md border border-[#dfe5ec] bg-[#f8fafc] p-3">
-      <div className="grid gap-3 xl:grid-cols-[1fr_1.4fr_auto]">
-        <form action={quickUpdateDeal.bind(null, deal.id)} className="flex flex-wrap items-end gap-2">
-          <input type="hidden" name="quickAction" value="eta" />
-          <label className="grid gap-1 text-xs font-semibold text-[#637389]">
-            ETA Mass Production
-            <input
-              name="eta"
-              type="date"
-              defaultValue={inputDate(deal.eta)}
-              className="h-9 rounded-md border border-[#dfe5ec] bg-white px-2 text-sm outline-none"
-            />
-          </label>
-          <label className="flex h-9 items-center gap-2 rounded-md border border-[#dfe5ec] bg-white px-2 text-xs font-semibold text-[#637389]">
-            <input name="etaUnbekannt" type="checkbox" defaultChecked={deal.etaUnbekannt} />
-            ETA unbekannt
-          </label>
-          <button className="h-9 rounded-md bg-[#17202c] px-3 text-sm font-semibold text-white" type="submit">
-            Speichern
-          </button>
-        </form>
-
-        <form action={quickUpdateDeal.bind(null, deal.id)} className="flex flex-wrap items-end gap-2">
-          <input type="hidden" name="quickAction" value="nextStep" />
-          <label className="grid min-w-56 flex-1 gap-1 text-xs font-semibold text-[#637389]">
-            Nächster Schritt
-            <input
-              name="naechsterSchritt"
-              defaultValue={deal.naechsterSchritt ?? ""}
-              placeholder="z. B. ETA beim Lieferanten anfragen"
-              className="h-9 rounded-md border border-[#dfe5ec] bg-white px-2 text-sm outline-none"
-            />
-          </label>
-          <label className="grid gap-1 text-xs font-semibold text-[#637389]">
-            Bearbeiten bis
-            <input
-              name="bearbeitenBis"
-              type="date"
-              defaultValue={inputDate(deal.bearbeitenBis)}
-              className="h-9 rounded-md border border-[#dfe5ec] bg-white px-2 text-sm outline-none"
-            />
-          </label>
-          <button className="h-9 rounded-md bg-[#17202c] px-3 text-sm font-semibold text-white" type="submit">
-            Setzen
-          </button>
-        </form>
-
-        <form action={quickUpdateDeal.bind(null, deal.id)} className="flex items-end">
-          <input type="hidden" name="quickAction" value="done" />
-          <button className="inline-flex h-9 items-center gap-2 rounded-md border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700" type="submit">
-            <CheckCircle2 size={15} /> Erledigt
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 function DealSignals({ deal }: { deal: DealWithRelations }) {
   const signals = [
     !deal.eta && !deal.etaUnbekannt ? { label: "ETA fehlt", tone: "yellow" } : null,
@@ -636,7 +586,14 @@ function DealForm({
         <Field name="marke" label="Marke" defaultValue={deal?.marke} placeholder="Silvercrest, Sanitas..." />
         <Field name="dealnummer" label="LIDL Deal Nummer" defaultValue={deal?.dealnummer} />
         <Field name="ausmusterung" label="Ausmusterung" defaultValue={deal?.ausmusterung} placeholder="Datum, KW oder Hinweis" />
-        <Field name="artikel" label="Artikel" required defaultValue={deal?.artikel} />
+        <Textarea
+          name="artikel"
+          label="Artikel"
+          required
+          rows={4}
+          className="md:col-span-2 xl:col-span-3"
+          defaultValue={deal?.artikel}
+        />
         <Field name="liefertermin" label="Liefertermin / KW" defaultValue={deal?.liefertermin} />
         <Field name="crdZeitfenster" label="CRD Window" defaultValue={deal?.crdZeitfenster} />
         <Field name="stueckzahl" label="Stückzahl" defaultValue={deal?.stueckzahl} />
@@ -1044,20 +1001,24 @@ function Textarea({
   label,
   defaultValue,
   required = false,
+  rows = 3,
+  className,
 }: {
   name: string;
   label: string;
   defaultValue?: string | null;
   required?: boolean;
+  rows?: number;
+  className?: string;
 }) {
   return (
-    <label className="grid gap-1 text-sm font-medium text-[#425166]">
+    <label className={clsx("grid gap-1 text-sm font-medium text-[#425166]", className)}>
       {label}
       <textarea
         name={name}
         required={required}
         defaultValue={defaultValue ?? ""}
-        rows={3}
+        rows={rows}
         className="resize-y rounded-md border border-[#dfe5ec] bg-white px-3 py-2 text-sm text-[#17202c] outline-none focus:border-[#4f7cff]"
       />
     </label>
@@ -1077,6 +1038,7 @@ function normalizeSearchParams(params?: Record<string, string | string[] | undef
     ampel: value("ampel"),
     month: value("month"),
     preset: value("preset"),
+    newDeal: value("new"),
   };
 }
 

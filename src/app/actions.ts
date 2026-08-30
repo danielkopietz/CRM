@@ -160,68 +160,8 @@ export async function addNote(dealId: string, formData: FormData) {
   revalidatePath("/");
 }
 
-export async function quickUpdateDeal(id: string, formData: FormData) {
-  await requireUser();
-  const type = optionalText(formData, "quickAction");
-  const user = await getSessionUser();
-  const previous = await prisma.deal.findUnique({ where: { id } });
-  if (!previous || !type) return;
-
-  if (type === "eta") {
-    const etaUnbekannt = checkbox(formData, "etaUnbekannt");
-    const eta = etaUnbekannt ? null : optionalDate(formData, "eta");
-    await prisma.deal.update({ where: { id }, data: { eta, etaUnbekannt } });
-    await trackSingleChange(id, "ETA", previous.eta, eta, user?.email ?? null);
-  }
-
-  if (type === "nextStep") {
-    await prisma.deal.update({
-      where: { id },
-      data: {
-        naechsterSchritt: optionalText(formData, "naechsterSchritt"),
-        bearbeitenBis: optionalDate(formData, "bearbeitenBis"),
-      },
-    });
-  }
-
-  if (type === "done") {
-    await prisma.deal.update({
-      where: { id },
-      data: {
-        status: "ABGESCHLOSSEN",
-        naechsterSchritt: null,
-        bearbeitenBis: null,
-      },
-    });
-  }
-
-  revalidatePath("/");
-}
-
 function stringifyChangeValue(value: string | Date | null | undefined) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   return value;
-}
-
-async function trackSingleChange(
-  dealId: string,
-  field: string,
-  oldValue: string | Date | null | undefined,
-  newValue: string | Date | null | undefined,
-  changedBy: string | null,
-) {
-  const oldText = stringifyChangeValue(oldValue);
-  const newText = stringifyChangeValue(newValue);
-  if (oldText === newText) return;
-
-  await prisma.dealChange.create({
-    data: {
-      dealId,
-      field,
-      oldValue: oldText,
-      newValue: newText,
-      changedBy,
-    },
-  });
 }
