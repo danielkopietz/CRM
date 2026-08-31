@@ -110,30 +110,30 @@ export default async function Home({
   const poReminders = buildPoReminders(deals);
 
   return (
-    <main className="min-h-screen bg-[#FFC9D7] text-[#17202c]">
-      <header className="border-b border-[#dde4ec] bg-white/95">
+    <main className="min-h-screen bg-[#f4efe7] text-[#2a241d]">
+      <header className="border-b border-[#e4ddd2] bg-[#fffdf8]/95 shadow-sm">
         <div className="mx-auto max-w-[1560px] px-5 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm font-medium text-[#637389]">Verzollung CRM · Einkauf 2026</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-normal text-[#17202c]">
+              <p className="text-sm font-medium text-[#746d63]">Verzollung CRM · Einkauf 2026</p>
+              <h1 className="mt-1 font-serif text-4xl font-medium tracking-normal text-[#17130f] md:text-5xl">
                 China Deals - Übersicht
               </h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 href={`/?tab=${tab}&new=1`}
-                className="inline-flex h-11 items-center gap-2 rounded-md bg-[#17202c] px-4 text-sm font-semibold text-white"
+                className="inline-flex h-11 items-center gap-2 rounded-md bg-[#4f6138] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#41522e]"
               >
                   <CirclePlus size={17} /> Neuer Deal
               </Link>
-              <div className="rounded-md border border-[#dfe5ec] bg-[#f7f9fb] px-3 py-2 text-sm text-[#425166]">
+              <div className="rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 py-2 text-sm text-[#5b554d] shadow-sm">
                 {user?.email ?? "Lokaler Setup-Modus"}
               </div>
               {authConfigured ? (
                 <a
                   href="/auth/logout"
-                  className="inline-flex h-11 items-center gap-2 rounded-md border border-[#dfe5ec] bg-white px-3 text-sm font-medium text-[#17202c]"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 text-sm font-medium text-[#2a241d] shadow-sm transition-colors hover:bg-[#faf8f3]"
                 >
                   <LogOut size={16} /> Logout
                 </a>
@@ -150,14 +150,14 @@ export default async function Home({
       </header>
 
       {params.newDeal ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#17202c]/45 p-4 backdrop-blur-[1px] sm:p-6">
-          <section className="my-auto max-h-[calc(100vh-2rem)] w-full max-w-[1180px] overflow-x-hidden overflow-y-auto rounded-lg border border-[#d6e0ea] bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
-            <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-[#dfe5ec] bg-white px-5 py-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#4f6138]/45 p-4 backdrop-blur-[1px] sm:p-6">
+          <section className="my-auto max-h-[calc(100vh-2rem)] w-full max-w-[1180px] overflow-x-hidden overflow-y-auto rounded-lg border border-[#ded4c6] bg-[#fffdf8] shadow-2xl sm:max-h-[calc(100vh-3rem)]">
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-[#e4ddd2] bg-[#fffdf8] px-5 py-4">
               <SectionTitle icon={<CirclePlus size={18} />} title="Neuen Deal erfassen" />
               <Link
                 href={`/?tab=${tab}`}
                 aria-label="Fenster schließen"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[#dfe5ec] text-[#425166] hover:bg-[#f4f6f8]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[#e4ddd2] text-[#5b554d] hover:bg-[#f3eee6]"
               >
                 <X size={18} />
               </Link>
@@ -173,7 +173,7 @@ export default async function Home({
         {!process.env.DATABASE_URL ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
             Keine Datenbank verbunden. In Coolify muss
-            <code className="mx-1 rounded bg-white px-1">DATABASE_URL</code>
+            <code className="mx-1 rounded bg-[#fffdf8] px-1">DATABASE_URL</code>
             gesetzt werden.
           </div>
         ) : null}
@@ -204,16 +204,16 @@ export default async function Home({
 
 function LoginScreen() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#FFC9D7] px-5">
-      <section className="w-full max-w-md rounded-md border border-[#dfe4ea] bg-white p-6">
-        <p className="text-sm font-medium text-[#637389]">Verzollung CRM</p>
-        <h1 className="mt-2 text-2xl font-semibold text-[#17202c]">Bitte anmelden</h1>
-        <p className="mt-3 text-sm leading-6 text-[#637389]">
+    <main className="flex min-h-screen items-center justify-center bg-[#f4efe7] px-5">
+      <section className="w-full max-w-md rounded-lg border border-[#e4ddd2] bg-[#fffdf8] p-6 shadow-sm">
+        <p className="text-sm font-medium text-[#746d63]">Verzollung CRM</p>
+        <h1 className="mt-2 font-serif text-3xl font-medium text-[#17130f]">Bitte anmelden</h1>
+        <p className="mt-3 text-sm leading-6 text-[#746d63]">
           Nach dem Login siehst du alle Deals, PO-Termine, Dokumente und Notizen.
         </p>
         <a
           href="/auth/login"
-          className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#17202c] px-4 text-sm font-medium text-white"
+          className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#4f6138] px-4 text-sm font-medium text-white shadow-sm hover:bg-[#41522e]"
         >
           <LogIn size={17} /> Mit E-Mail und Passwort einloggen
         </a>
@@ -259,7 +259,7 @@ function DashboardView({
 
       <ReminderPanel reminders={poReminders} />
 
-      <section className="rounded-md border border-[#dfe5ec] bg-white">
+      <section className="rounded-lg border border-[#e4ddd2] bg-[#fffdf8]">
         <PanelHeader
           icon={<TrendingUp size={18} />}
           title="Heute handeln"
@@ -285,7 +285,7 @@ function DealsView({
   embedded?: boolean;
 }) {
   return (
-    <section className="rounded-md border border-[#dfe5ec] bg-white">
+    <section className="rounded-lg border border-[#e4ddd2] bg-[#fffdf8]">
       <PanelHeader icon={<ClipboardList size={18} />} title="Deal-Übersicht" detail={`${deals.length} von ${allDeals.length} Deals`} />
       <Filters params={params} />
       <CompactDealTable deals={sortByUrgency(deals)} empty="Keine Deals für diese Filter." showDetails={!embedded} />
@@ -299,24 +299,24 @@ function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: S
   const events = buildEvents(deals);
 
   return (
-    <section className="rounded-md border border-[#dfe5ec] bg-white">
-      <div className="flex flex-col gap-3 border-b border-[#dfe5ec] p-4 lg:flex-row lg:items-center lg:justify-between">
+    <section className="rounded-lg border border-[#e4ddd2] bg-[#fffdf8]">
+      <div className="flex flex-col gap-3 border-b border-[#e4ddd2] p-4 lg:flex-row lg:items-center lg:justify-between">
         <PanelTitle icon={<CalendarClock size={18} />} title="Kalender" detail="ETD, ETA und interne Bearbeitungsfristen" />
         <div className="flex items-center gap-2">
-          <Link href={`/?tab=kalender&month=${shiftMonth(month, -1)}`} className="rounded-md border border-[#dfe5ec] px-3 py-2 text-sm font-medium">
+          <Link href={`/?tab=kalender&month=${shiftMonth(month, -1)}`} className="rounded-md border border-[#e4ddd2] px-3 py-2 text-sm font-medium">
             Zurück
           </Link>
-          <div className="min-w-40 rounded-md bg-[#f4f6f8] px-3 py-2 text-center text-sm font-semibold">
+          <div className="min-w-40 rounded-md bg-[#f3eee6] px-3 py-2 text-center text-sm font-semibold">
             {month.toLocaleDateString("de-DE", { month: "long", year: "numeric" })}
           </div>
-          <Link href={`/?tab=kalender&month=${shiftMonth(month, 1)}`} className="rounded-md border border-[#dfe5ec] px-3 py-2 text-sm font-medium">
+          <Link href={`/?tab=kalender&month=${shiftMonth(month, 1)}`} className="rounded-md border border-[#e4ddd2] px-3 py-2 text-sm font-medium">
             Weiter
           </Link>
         </div>
       </div>
-      <div className="grid grid-cols-7 border-b border-[#dfe5ec] bg-[#f8fafc] text-xs font-semibold uppercase text-[#637389]">
+      <div className="grid grid-cols-7 border-b border-[#e4ddd2] bg-[#faf8f3] text-xs font-semibold uppercase text-[#746d63]">
         {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((day) => (
-          <div key={day} className="border-r border-[#edf1f5] px-3 py-2 last:border-r-0">
+          <div key={day} className="border-r border-[#eee7dc] px-3 py-2 last:border-r-0">
             {day}
           </div>
         ))}
@@ -327,7 +327,7 @@ function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: S
           const dayEvents = events.filter((event) => event.key === key);
           const outside = day.getMonth() !== month.getMonth();
           return (
-            <div key={key} className={clsx("min-h-36 border-b border-r border-[#edf1f5] p-2 last:border-r-0", outside && "bg-[#fafbfc] text-[#9aa6b5]")}>
+            <div key={key} className={clsx("min-h-36 border-b border-r border-[#eee7dc] p-2 last:border-r-0", outside && "bg-[#fffdf8] text-[#9aa6b5]")}>
               <div className="text-sm font-semibold">{day.getDate()}</div>
               <div className="mt-2 space-y-1">
                 {dayEvents.slice(0, 4).map((event) => (
@@ -335,7 +335,7 @@ function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: S
                     <span className="font-semibold">{event.type}</span> · {event.deal.kunde} · {event.deal.artikel}
                   </div>
                 ))}
-                {dayEvents.length > 4 ? <p className="text-xs text-[#637389]">+{dayEvents.length - 4} weitere</p> : null}
+                {dayEvents.length > 4 ? <p className="text-xs text-[#746d63]">+{dayEvents.length - 4} weitere</p> : null}
               </div>
             </div>
           );
@@ -349,9 +349,9 @@ function Filters({ params }: { params: Search }) {
   const presets = ["Silvercrest", "Sanitas", "Kaufland", "Hartmann"];
 
   return (
-    <div className="border-b border-[#dfe5ec] p-4">
+    <div className="border-b border-[#e4ddd2] p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-xs font-semibold uppercase text-[#637389]">Fertige Übersichten</span>
+        <span className="mr-1 text-xs font-semibold uppercase text-[#746d63]">Fertige Übersichten</span>
         {presets.map((preset) => (
           <Link
             key={preset}
@@ -359,15 +359,15 @@ function Filters({ params }: { params: Search }) {
             className={clsx(
               "rounded-md border px-3 py-2 text-sm font-semibold",
               params.preset === preset
-                ? "border-[#17202c] bg-[#17202c] text-white"
-                : "border-[#dfe5ec] bg-[#f8fafc] text-[#425166]",
+                ? "border-[#4f6138] bg-[#4f6138] text-white"
+                : "border-[#e4ddd2] bg-[#faf8f3] text-[#5b554d]",
             )}
           >
             {preset}
           </Link>
         ))}
         {params.preset ? (
-          <Link href="/?tab=deals" className="px-2 py-2 text-sm font-semibold text-[#637389]">
+          <Link href="/?tab=deals" className="px-2 py-2 text-sm font-semibold text-[#746d63]">
             Filter zurücksetzen
           </Link>
         ) : null}
@@ -375,8 +375,8 @@ function Filters({ params }: { params: Search }) {
       <form className="grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto]" action="/">
         <input type="hidden" name="tab" value="deals" />
         {params.preset ? <input type="hidden" name="preset" value={params.preset} /> : null}
-        <label className="flex h-10 items-center gap-2 rounded-md border border-[#dfe5ec] bg-[#f8fafc] px-3">
-          <Search size={16} className="text-[#637389]" />
+        <label className="flex h-10 items-center gap-2 rounded-md border border-[#e4ddd2] bg-[#faf8f3] px-3">
+          <Search size={16} className="text-[#746d63]" />
           <input
             name="q"
             defaultValue={params.q ?? ""}
@@ -384,8 +384,8 @@ function Filters({ params }: { params: Search }) {
             className="min-w-0 flex-1 bg-transparent text-sm outline-none"
           />
         </label>
-        <input name="kunde" defaultValue={params.kunde ?? ""} placeholder="Kunde" className="h-10 rounded-md border border-[#dfe5ec] px-3 text-sm outline-none" />
-        <select name="status" defaultValue={params.status ?? ""} className="h-10 rounded-md border border-[#dfe5ec] px-3 text-sm outline-none">
+        <input name="kunde" defaultValue={params.kunde ?? ""} placeholder="Kunde" className="h-10 rounded-md border border-[#e4ddd2] px-3 text-sm outline-none" />
+        <select name="status" defaultValue={params.status ?? ""} className="h-10 rounded-md border border-[#e4ddd2] px-3 text-sm outline-none">
           <option value="">Alle Status</option>
           {dealStatuses.map((status) => (
             <option key={status} value={status}>
@@ -393,13 +393,13 @@ function Filters({ params }: { params: Search }) {
             </option>
           ))}
         </select>
-        <select name="ampel" defaultValue={params.ampel ?? ""} className="h-10 rounded-md border border-[#dfe5ec] px-3 text-sm outline-none">
+        <select name="ampel" defaultValue={params.ampel ?? ""} className="h-10 rounded-md border border-[#e4ddd2] px-3 text-sm outline-none">
           <option value="">Alle Ampeln</option>
           <option value="red">Rot</option>
           <option value="yellow">Gelb</option>
           <option value="green">Grün</option>
         </select>
-        <button className="h-10 rounded-md bg-[#17202c] px-4 text-sm font-semibold text-white" type="submit">
+        <button className="h-10 rounded-md bg-[#4f6138] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#41522e]" type="submit">
           Filtern
         </button>
       </form>
@@ -417,13 +417,13 @@ function CompactDealTable({
   showDetails?: boolean;
 }) {
   if (deals.length === 0) {
-    return <p className="p-5 text-sm text-[#637389]">{empty}</p>;
+    return <p className="p-5 text-sm text-[#746d63]">{empty}</p>;
   }
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[1200px] border-collapse text-left text-sm">
-        <thead className="bg-[#f8fafc] text-xs font-semibold uppercase text-[#637389]">
+        <thead className="bg-[#faf8f3] text-xs font-semibold uppercase text-[#746d63]">
           <tr>
             <th className="px-4 py-3">Keyfacts</th>
             <th className="px-4 py-3">Menge / Preis</th>
@@ -442,7 +442,7 @@ function CompactDealTable({
                 <tr
                   key={`${deal.id}-summary`}
                   className={clsx(
-                    "align-top hover:bg-[#fafbfc]",
+                    "align-top hover:bg-[#fffdf8]",
                     light !== "green" && "crm-soft-pulse",
                   )}
                 >
@@ -459,23 +459,23 @@ function CompactDealTable({
                   </td>
                   <td className="px-3 py-4">
                     <p>{deal.stueckzahl || "-"}</p>
-                    <p className="mt-1 text-xs text-[#637389]">Preis: {deal.preis || "-"}</p>
-                    <p className="mt-1 text-xs text-[#637389]">Warenwert: {deal.warenwert || "-"}</p>
+                    <p className="mt-1 text-xs text-[#746d63]">Preis: {deal.preis || "-"}</p>
+                    <p className="mt-1 text-xs text-[#746d63]">Warenwert: {deal.warenwert || "-"}</p>
                   </td>
                   <td className="min-w-[330px] px-3 py-4"><PoOverview deal={deal} /></td>
                   <td className="px-3 py-4">
                     <p>{formatDate(deal.bearbeitenBis) || "-"}</p>
-                    <p className="text-xs text-[#637389]">{relativeDate(deal.bearbeitenBis)}</p>
+                    <p className="text-xs text-[#746d63]">{relativeDate(deal.bearbeitenBis)}</p>
                   </td>
                   <td className="max-w-[240px] px-3 py-4">
-                    <p className="line-clamp-3 text-[#425166]">{deal.naechsterSchritt || "-"}</p>
-                    {deal.notizenKurz ? <p className="mt-2 line-clamp-2 text-xs text-[#637389]">{deal.notizenKurz}</p> : null}
+                    <p className="line-clamp-3 text-[#5b554d]">{deal.naechsterSchritt || "-"}</p>
+                    {deal.notizenKurz ? <p className="mt-2 line-clamp-2 text-xs text-[#746d63]">{deal.notizenKurz}</p> : null}
                   </td>
                   <td className="px-3 py-4">
                     {showDetails ? (
-                      <span className="text-sm font-medium text-[#637389]">Details unten</span>
+                      <span className="text-sm font-medium text-[#746d63]">Details unten</span>
                     ) : (
-                      <Link href="/?tab=deals" className="font-semibold text-[#244ac8]">
+                      <Link href="/?tab=deals" className="font-semibold text-[#4f6138]">
                         Öffnen
                       </Link>
                     )}
@@ -489,7 +489,7 @@ function CompactDealTable({
                   </td>
                 </tr>
                 {showDetails ? (
-                  <tr key={`${deal.id}-details`} className="bg-white">
+                  <tr key={`${deal.id}-details`} className="bg-[#fffdf8]">
                     <td colSpan={7} className="px-3 pb-5">
                       <DealDetails deal={deal} />
                     </td>
@@ -510,12 +510,12 @@ function PoOverview({ deal }: { deal: Deal }) {
       {getPoSchedules(deal).map((po) => (
         <div
           key={po.key}
-          className="grid grid-cols-[112px_1fr_auto] items-center gap-2 rounded-md border border-transparent bg-[#f8fafc] px-2 py-1.5 text-xs transition-colors has-[input:checked]:border-emerald-200 has-[input:checked]:bg-emerald-100"
+          className="grid grid-cols-[112px_1fr_auto] items-center gap-2 rounded-md border border-transparent bg-[#faf8f3] px-2 py-1.5 text-xs transition-colors has-[input:checked]:border-emerald-200 has-[input:checked]:bg-emerald-100"
         >
-          <span className="font-semibold text-[#425166]">{po.shortLabel}</span>
+          <span className="font-semibold text-[#5b554d]">{po.shortLabel}</span>
           <span className="min-w-0">
-            <span className="block truncate font-semibold text-[#17202c]">PO {po.number || "-"}</span>
-            <span className="mt-0.5 block text-[#637389]">
+            <span className="block truncate font-semibold text-[#2a241d]">PO {po.number || "-"}</span>
+            <span className="mt-0.5 block text-[#746d63]">
               ETD {formatDate(po.etd) || "-"} · ETA {formatDate(po.eta) || (po.etaUnknown ? "bewusst offen" : "-")}
             </span>
           </span>
@@ -533,10 +533,10 @@ function PoOverview({ deal }: { deal: Deal }) {
 function DealDetails({ deal }: { deal: DealWithRelations }) {
   return (
     <details className="group">
-      <summary className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-[#dfe5ec] bg-white px-3 py-2 text-sm font-semibold text-[#425166] group-open:hidden">
+      <summary className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#5b554d] group-open:hidden">
         <Pencil size={15} /> Details
       </summary>
-      <div className="mt-3 grid w-full gap-4 rounded-md border border-[#dfe5ec] bg-white p-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-3 grid w-full gap-4 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] p-4 shadow-sm xl:grid-cols-[minmax(0,1fr)_340px]">
         <div>
           <SectionTitle icon={<Pencil size={17} />} title="Deal bearbeiten" />
           <DealForm action={updateDeal.bind(null, deal.id)} deal={deal} submitLabel="Änderungen speichern" />
@@ -682,7 +682,7 @@ function DealForm({
         <Textarea name="notizenKurz" label="Aktueller Status / allgemeine Notizen" defaultValue={deal?.notizenKurz} />
       </div>
 
-      <button className="h-11 rounded-md bg-[#17202c] px-4 text-sm font-semibold text-white" type="submit">
+      <button className="h-11 rounded-md bg-[#4f6138] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#41522e]" type="submit">
         {submitLabel}
       </button>
     </form>
@@ -713,15 +713,15 @@ function PoInputBlock({
   etaUnknown?: boolean;
 }) {
   return (
-    <section className="rounded-md border border-[#dfe5ec] bg-[#f8fafc] p-3">
-      <h3 className="text-sm font-semibold text-[#17202c]">{title}</h3>
+    <section className="rounded-md border border-[#e4ddd2] bg-[#faf8f3] p-3">
+      <h3 className="text-sm font-semibold text-[#2a241d]">{title}</h3>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <Field name={poName} label="PO Nummer" required={required} defaultValue={poValue} />
         <Field name={etdName} label="ETD" type="date" required={required} defaultValue={inputDate(etdValue)} />
         <Field name={etaName} label="ETA" type="date" defaultValue={inputDate(etaValue)} />
       </div>
       {etaUnknownName ? (
-        <label className="mt-3 flex items-center gap-2 text-sm font-medium text-[#425166]">
+        <label className="mt-3 flex items-center gap-2 text-sm font-medium text-[#5b554d]">
           <input name={etaUnknownName} type="checkbox" defaultChecked={etaUnknown} />
           ETA bewusst unbekannt
         </label>
@@ -743,7 +743,7 @@ function ProcessDocumentCheckbox({
 
   return (
     <label
-      className="flex min-h-14 cursor-pointer items-center gap-3 rounded-md border border-[#dfe5ec] bg-[#f8fafc] px-3 py-2 text-sm font-semibold text-[#425166] [&:has(input:checked)]:border-emerald-200 [&:has(input:checked)]:bg-emerald-50 [&:has(input:checked)]:text-emerald-800"
+      className="flex min-h-14 cursor-pointer items-center gap-3 rounded-md border border-[#e4ddd2] bg-[#faf8f3] px-3 py-2 text-sm font-semibold text-[#5b554d] [&:has(input:checked)]:border-emerald-200 [&:has(input:checked)]:bg-emerald-50 [&:has(input:checked)]:text-emerald-800"
     >
       <input
         name={name}
@@ -760,14 +760,14 @@ function ProcessDocumentCheckbox({
 
 function ReminderPanel({ reminders }: { reminders: PoReminder[] }) {
   return (
-    <section className="rounded-md border border-[#dfe5ec] bg-white">
+    <section className="rounded-lg border border-[#e4ddd2] bg-[#fffdf8]">
       <PanelHeader
         icon={<BellRing size={18} />}
         title="PO Erinnerungen"
         detail="Die Termine werden immer aus dem aktuell gespeicherten ETD-/ETA-Datum berechnet."
       />
       {reminders.length === 0 ? (
-        <p className="p-4 text-sm text-[#637389]">Aktuell ist keine PO-Erinnerung fällig.</p>
+        <p className="p-4 text-sm text-[#746d63]">Aktuell ist keine PO-Erinnerung fällig.</p>
       ) : (
         <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
           {reminders.slice(0, 9).map((reminder) => (
@@ -790,23 +790,23 @@ function ReminderPopup({ reminders }: { reminders: PoReminder[] }) {
   if (reminders.length === 0) return null;
 
   return (
-    <aside className="fixed bottom-5 left-5 z-30 w-[min(360px,calc(100vw-2.5rem))] rounded-md border border-[#dfe5ec] bg-white p-4 shadow-xl">
+    <aside className="fixed bottom-5 left-5 z-30 w-[min(360px,calc(100vw-2.5rem))] rounded-lg border border-[#e4ddd2] bg-[#fffdf8] p-4 shadow-xl">
       <div className="flex items-start gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-md bg-amber-50 text-amber-700">
           <BellRing size={18} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-[#17202c]">Erinnerungen</p>
-          <p className="mt-1 text-sm text-[#637389]">
+          <p className="font-semibold text-[#2a241d]">Erinnerungen</p>
+          <p className="mt-1 text-sm text-[#746d63]">
             {reminders.length} PO-Termin{reminders.length === 1 ? "" : "e"} brauchen Aufmerksamkeit.
           </p>
         </div>
       </div>
       <div className="mt-3 space-y-2">
         {reminders.slice(0, 3).map((reminder) => (
-          <div key={reminder.id} className="rounded-md bg-[#f8fafc] px-3 py-2 text-sm">
+          <div key={reminder.id} className="rounded-md bg-[#faf8f3] px-3 py-2 text-sm">
             <p className="font-semibold">{reminder.title}</p>
-            <p className="mt-1 text-xs text-[#637389]">{reminder.deal.kunde} · {reminder.deal.artikel} · {relativeDate(reminder.date)}</p>
+            <p className="mt-1 text-xs text-[#746d63]">{reminder.deal.kunde} · {reminder.deal.artikel} · {relativeDate(reminder.date)}</p>
           </div>
         ))}
       </div>
@@ -829,13 +829,13 @@ function DocumentStatusGrid({ deal }: { deal: Deal }) {
   ] as const;
 
   return (
-    <section className="rounded-md border border-[#dfe5ec] bg-[#f8fafc] p-3">
+    <section className="rounded-md border border-[#e4ddd2] bg-[#faf8f3] p-3">
       <SectionTitle icon={<FileCheck2 size={16} />} title="Prozessdokumente" />
       <div className="mt-3 grid gap-2">
         {docs.map(([label, status]) => {
           const complete = status !== "FEHLT";
           return (
-            <div key={label} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm">
+            <div key={label} className="flex items-center justify-between gap-3 rounded-md bg-[#fffdf8] px-3 py-2 text-sm">
               <span>{label}</span>
               <span
                 className={clsx(
@@ -855,22 +855,22 @@ function DocumentStatusGrid({ deal }: { deal: Deal }) {
 
 function NotesPanel({ deal }: { deal: DealWithRelations }) {
   return (
-    <section className="rounded-md border border-[#dfe5ec] bg-[#f8fafc] p-3">
+    <section className="rounded-md border border-[#e4ddd2] bg-[#faf8f3] p-3">
       <SectionTitle icon={<StickyNote size={16} />} title="Verlauf" />
       <form action={addNote.bind(null, deal.id)} className="mt-3 flex gap-2">
-        <input name="note" placeholder="Stand, Rückfrage, nächster Step..." className="min-w-0 flex-1 rounded-md border border-[#dfe5ec] bg-white px-3 text-sm outline-none" />
-        <button className="h-10 rounded-md bg-[#17202c] px-3 text-sm font-semibold text-white" type="submit">
+        <input name="note" placeholder="Stand, Rückfrage, nächster Step..." className="min-w-0 flex-1 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 text-sm outline-none" />
+        <button className="h-10 rounded-md bg-[#4f6138] px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#41522e]" type="submit">
           Hinzufügen
         </button>
       </form>
       <div className="mt-3 space-y-2">
         {deal.notes.length === 0 ? (
-          <p className="text-sm text-[#637389]">Noch kein Verlauf.</p>
+          <p className="text-sm text-[#746d63]">Noch kein Verlauf.</p>
         ) : (
           deal.notes.map((note) => (
-            <div key={note.id} className="rounded-md bg-white p-3">
+            <div key={note.id} className="rounded-md bg-[#fffdf8] p-3">
               <p className="text-sm leading-5">{note.text}</p>
-              <p className="mt-2 text-xs text-[#637389]">{formatDate(note.createdAt)}</p>
+              <p className="mt-2 text-xs text-[#746d63]">{formatDate(note.createdAt)}</p>
             </div>
           ))
         )}
@@ -881,19 +881,19 @@ function NotesPanel({ deal }: { deal: DealWithRelations }) {
 
 function ChangeHistory({ changes }: { changes: DealChange[] }) {
   return (
-    <section className="rounded-md border border-[#dfe5ec] bg-[#f8fafc] p-3">
+    <section className="rounded-md border border-[#e4ddd2] bg-[#faf8f3] p-3">
       <SectionTitle icon={<TrendingUp size={16} />} title="Änderungen" />
       <div className="mt-3 space-y-2">
         {changes.length === 0 ? (
-          <p className="text-sm text-[#637389]">Noch keine ETA/ETD/Menge/Preis-Änderung.</p>
+          <p className="text-sm text-[#746d63]">Noch keine ETA/ETD/Menge/Preis-Änderung.</p>
         ) : (
           changes.map((change) => (
-            <div key={change.id} className="rounded-md bg-white p-3 text-sm">
+            <div key={change.id} className="rounded-md bg-[#fffdf8] p-3 text-sm">
               <p className="font-semibold">{change.field}</p>
-              <p className="mt-1 text-[#637389]">
+              <p className="mt-1 text-[#746d63]">
                 {change.oldValue || "-"} → {change.newValue || "-"}
               </p>
-              <p className="mt-1 text-xs text-[#637389]">{formatDate(change.createdAt)}</p>
+              <p className="mt-1 text-xs text-[#746d63]">{formatDate(change.createdAt)}</p>
             </div>
           ))
         )}
@@ -914,19 +914,19 @@ function MetricCard({
   tone?: "default" | "green" | "yellow" | "red";
 }) {
   return (
-    <div className="rounded-md border border-[#dfe5ec] bg-white p-4">
+    <div className="rounded-lg border border-[#e4ddd2] bg-[#fffdf8] p-4 shadow-sm">
       <div
         className={clsx(
           "mb-3 inline-flex h-9 w-9 items-center justify-center rounded-md",
           tone === "green" && "bg-emerald-50 text-emerald-700",
           tone === "yellow" && "bg-amber-50 text-amber-700",
           tone === "red" && "bg-rose-50 text-rose-700",
-          tone === "default" && "bg-[#eef2f5] text-[#425166]",
+          tone === "default" && "bg-[#efeee5] text-[#4f6138]",
         )}
       >
         {icon}
       </div>
-      <p className="text-sm text-[#637389]">{label}</p>
+      <p className="text-sm text-[#746d63]">{label}</p>
       <p className="mt-1 text-3xl font-semibold">{value}</p>
     </div>
   );
@@ -934,7 +934,7 @@ function MetricCard({
 
 function PanelHeader({ icon, title, detail }: { icon: React.ReactNode; title: string; detail: string }) {
   return (
-    <div className="border-b border-[#dfe5ec] p-4">
+    <div className="border-b border-[#e4ddd2] p-4">
       <PanelTitle icon={icon} title={title} detail={detail} />
     </div>
   );
@@ -943,10 +943,10 @@ function PanelHeader({ icon, title, detail }: { icon: React.ReactNode; title: st
 function PanelTitle({ icon, title, detail }: { icon: React.ReactNode; title: string; detail: string }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[#eef2f5] text-[#425166]">{icon}</div>
+      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[#efeee5] text-[#4f6138]">{icon}</div>
       <div>
         <h2 className="font-semibold">{title}</h2>
-        <p className="text-sm text-[#637389]">{detail}</p>
+        <p className="text-sm text-[#746d63]">{detail}</p>
       </div>
     </div>
   );
@@ -954,7 +954,7 @@ function PanelTitle({ icon, title, detail }: { icon: React.ReactNode; title: str
 
 function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-normal text-[#425166]">
+    <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-normal text-[#5b554d]">
       {icon}
       <span>{title}</span>
     </div>
@@ -967,7 +967,7 @@ function TabLink({ active, href, label }: { active: boolean; href: string; label
       href={href}
       className={clsx(
         "rounded-md px-4 py-2 text-sm font-semibold",
-        active ? "bg-[#17202c] text-white" : "border border-[#dfe5ec] bg-white text-[#425166]",
+        active ? "bg-[#4f6138] text-white" : "border border-[#e4ddd2] bg-[#fffdf8] text-[#5b554d]",
       )}
     >
       {label}
@@ -991,7 +991,7 @@ function Field({
   required?: boolean;
 }) {
   return (
-    <label className="grid gap-1 text-sm font-medium text-[#425166]">
+    <label className="grid gap-1 text-sm font-medium text-[#5b554d]">
       {label}
       <input
         name={name}
@@ -999,7 +999,7 @@ function Field({
         required={required}
         defaultValue={defaultValue ?? ""}
         placeholder={placeholder}
-        className="h-10 rounded-md border border-[#dfe5ec] bg-white px-3 text-sm text-[#17202c] outline-none focus:border-[#4f7cff]"
+        className="h-10 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 text-sm text-[#2a241d] outline-none focus:border-[#6f7d4b]"
       />
     </label>
   );
@@ -1021,14 +1021,14 @@ function Textarea({
   className?: string;
 }) {
   return (
-    <label className={clsx("grid gap-1 text-sm font-medium text-[#425166]", className)}>
+    <label className={clsx("grid gap-1 text-sm font-medium text-[#5b554d]", className)}>
       {label}
       <textarea
         name={name}
         required={required}
         defaultValue={defaultValue ?? ""}
         rows={rows}
-        className="resize-y rounded-md border border-[#dfe5ec] bg-white px-3 py-2 text-sm text-[#17202c] outline-none focus:border-[#4f7cff]"
+        className="resize-y rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 py-2 text-sm text-[#2a241d] outline-none focus:border-[#6f7d4b]"
       />
     </label>
   );
