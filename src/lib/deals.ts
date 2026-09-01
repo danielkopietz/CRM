@@ -6,6 +6,7 @@ import type {
   RiskStatus,
   WaitTarget,
 } from "@prisma/client";
+import { isHartmannCustomer } from "@/lib/customers";
 
 export const statusLabels: Record<DealStatus, string> = {
   NEU: "Neu",
@@ -60,13 +61,17 @@ export const documentStatuses = Object.keys(documentStatusLabels) as DocumentSta
 
 export type TrafficLight = "green" | "yellow" | "red";
 
-export function getTrafficLight(deal: Pick<Deal, "eta" | "etaUnbekannt" | "bearbeitenBis" | "status">): TrafficLight {
+export function getTrafficLight(deal: Pick<Deal, "kunde" | "eta" | "etaUnbekannt" | "bearbeitenBis" | "status">): TrafficLight {
   if (deal.status === "ABGESCHLOSSEN" || deal.status === "FREIGEGEBEN") {
     return "green";
   }
 
   if (deal.status === "PROBLEM_ROT") {
     return "red";
+  }
+
+  if (isHartmannCustomer(deal.kunde)) {
+    return "green";
   }
 
   const today = startOfDay(new Date());

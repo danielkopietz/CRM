@@ -7,6 +7,7 @@ Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsproz
 - Auth0 Login mit E-Mail und Passwort
 - PostgreSQL Datenbank ueber Prisma
 - Deals fuer Lidl, Kaufland, Hartmann usw. anlegen und bearbeiten
+- Feste Kundenauswahl fuer Sensiplast, Sanitas, Kaufland, Hartmann und Private Label; Hartmann-Deals nutzen eine reduzierte Erfassung fuer Artikel, Liefertermin, eine PO, naechsten Schritt und aktuellen Status
 - Felder fuer Marke, Artikel, Menge, Preis, LIDL Dealnummer, Ausmusterung, CRD, Liefertermin und Notizen
 - Eigene PO-Nummer, ETD und ETA fuer Mass Production, Drittlandsware, Fotomuster, QS Muster und Serviceware
 - Status: Neu, In Klaerung, PO offen, Muster offen, Produktion, Verschifft, Verzollung vorbereiten, Beim Zoll, Freigegeben, Abgeschlossen, Problem / Rot

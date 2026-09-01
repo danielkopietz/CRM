@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAuthConfigured, getSessionUser } from "@/lib/auth0";
+import { isHartmannCustomer } from "@/lib/customers";
 import { prisma } from "@/lib/prisma";
 
 async function requireUser() {
@@ -37,56 +38,69 @@ function processDocument(formData: FormData, key: string) {
 function dealPayload(formData: FormData) {
   const kunde = optionalText(formData, "kunde");
   const artikel = optionalText(formData, "artikel");
-  const etd = optionalDate(formData, "etd");
-  const etaUnbekannt = checkbox(formData, "etaUnbekannt");
-  const eta = etaUnbekannt ? null : optionalDate(formData, "eta");
-  const bearbeitenBis = optionalDate(formData, "bearbeitenBis");
+  const liefertermin = optionalText(formData, "liefertermin");
+  const po = optionalText(formData, "po");
+  const hartmann = isHartmannCustomer(kunde);
+  const etd = hartmann ? null : optionalDate(formData, "etd");
+  const etaUnbekannt = hartmann ? false : checkbox(formData, "etaUnbekannt");
+  const eta = hartmann || etaUnbekannt ? null : optionalDate(formData, "eta");
+  const bearbeitenBis = hartmann ? null : optionalDate(formData, "bearbeitenBis");
 
   if (!kunde || !artikel) {
     throw new Error("Kunde und Artikel sind Pflichtfelder.");
+  }
+  if (hartmann && (!liefertermin || !po)) {
+    throw new Error("Für Hartmann sind Liefertermin/KW und PO Pflichtfelder.");
   }
 
   return {
     kunde,
     artikel,
-    marke: optionalText(formData, "marke"),
-    stueckzahl: optionalText(formData, "stueckzahl"),
-    preis: optionalText(formData, "preis"),
-    warenwert: optionalText(formData, "warenwert"),
-    marge: optionalText(formData, "marge"),
-    dealnummer: optionalText(formData, "dealnummer"),
-    ausmusterung: optionalText(formData, "ausmusterung"),
-    liefertermin: optionalText(formData, "liefertermin"),
-    po: optionalText(formData, "po"),
-    drittlandswarePo: optionalText(formData, "drittlandswarePo"),
-    drittlandswareEtd: optionalDate(formData, "drittlandswareEtd"),
-    drittlandswareEta: optionalDate(formData, "drittlandswareEta"),
-    fotomusterPo: optionalText(formData, "fotomusterPo"),
-    fotomusterEtd: optionalDate(formData, "fotomusterEtd"),
-    fotomusterEta: optionalDate(formData, "fotomusterEta"),
-    qsMusterPo: optionalText(formData, "qsMusterPo"),
-    qsMusterEtd: optionalDate(formData, "qsMusterEtd"),
-    qsMusterEta: optionalDate(formData, "qsMusterEta"),
-    servicewarePo: optionalText(formData, "servicewarePo"),
-    servicewareEtd: optionalDate(formData, "servicewareEtd"),
-    servicewareEta: optionalDate(formData, "servicewareEta"),
+    marke: hartmann ? null : optionalText(formData, "marke"),
+    stueckzahl: hartmann ? null : optionalText(formData, "stueckzahl"),
+    preis: hartmann ? null : optionalText(formData, "preis"),
+    warenwert: hartmann ? null : optionalText(formData, "warenwert"),
+    marge: hartmann ? null : optionalText(formData, "marge"),
+    dealnummer: hartmann ? null : optionalText(formData, "dealnummer"),
+    ausmusterung: hartmann ? null : optionalText(formData, "ausmusterung"),
+    liefertermin,
+    po,
+    drittlandswarePo: hartmann ? null : optionalText(formData, "drittlandswarePo"),
+    drittlandswareEtd: hartmann ? null : optionalDate(formData, "drittlandswareEtd"),
+    drittlandswareEta: hartmann ? null : optionalDate(formData, "drittlandswareEta"),
+    fotomusterPo: hartmann ? null : optionalText(formData, "fotomusterPo"),
+    fotomusterEtd: hartmann ? null : optionalDate(formData, "fotomusterEtd"),
+    fotomusterEta: hartmann ? null : optionalDate(formData, "fotomusterEta"),
+    qsMusterPo: hartmann ? null : optionalText(formData, "qsMusterPo"),
+    qsMusterEtd: hartmann ? null : optionalDate(formData, "qsMusterEtd"),
+    qsMusterEta: hartmann ? null : optionalDate(formData, "qsMusterEta"),
+    servicewarePo: hartmann ? null : optionalText(formData, "servicewarePo"),
+    servicewareEtd: hartmann ? null : optionalDate(formData, "servicewareEtd"),
+    servicewareEta: hartmann ? null : optionalDate(formData, "servicewareEta"),
     etd,
     eta,
     etaUnbekannt,
-    crdZeitfenster: optionalText(formData, "crdZeitfenster"),
+    crdZeitfenster: hartmann ? null : optionalText(formData, "crdZeitfenster"),
     naechsterSchritt: optionalText(formData, "naechsterSchritt"),
     bearbeitenBis,
-    dokumentenDrafts: processDocument(formData, "dokumentenDrafts"),
-    verschiffungspapiere: processDocument(formData, "verschiffungspapiere"),
-    telexBl: processDocument(formData, "telexBl"),
-    proformaDrittlandsware: processDocument(formData, "proformaDrittlandsware"),
-    inspektion100: processDocument(formData, "inspektion100"),
-    shipmentRelease: processDocument(formData, "shipmentRelease"),
-    releaseDocument: processDocument(formData, "releaseDocument"),
-    h1Document: processDocument(formData, "h1Document"),
-    t1Document: processDocument(formData, "t1Document"),
-    entladebericht: processDocument(formData, "entladebericht"),
+    dokumentenDrafts: hartmann ? "FEHLT" as const : processDocument(formData, "dokumentenDrafts"),
+    verschiffungspapiere: hartmann ? "FEHLT" as const : processDocument(formData, "verschiffungspapiere"),
+    telexBl: hartmann ? "FEHLT" as const : processDocument(formData, "telexBl"),
+    proformaDrittlandsware: hartmann ? "FEHLT" as const : processDocument(formData, "proformaDrittlandsware"),
+    inspektion100: hartmann ? "FEHLT" as const : processDocument(formData, "inspektion100"),
+    shipmentRelease: hartmann ? "FEHLT" as const : processDocument(formData, "shipmentRelease"),
+    releaseDocument: hartmann ? "FEHLT" as const : processDocument(formData, "releaseDocument"),
+    h1Document: hartmann ? "FEHLT" as const : processDocument(formData, "h1Document"),
+    t1Document: hartmann ? "FEHLT" as const : processDocument(formData, "t1Document"),
+    entladebericht: hartmann ? "FEHLT" as const : processDocument(formData, "entladebericht"),
     notizenKurz: optionalText(formData, "notizenKurz"),
+    ...(hartmann ? {
+      poMassProductionDone: false,
+      poDrittlandswareDone: false,
+      poFotomusterDone: false,
+      poQsMusterDone: false,
+      poServicewareDone: false,
+    } : {}),
   };
 }
 

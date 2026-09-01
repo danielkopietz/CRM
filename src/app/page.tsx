@@ -36,6 +36,7 @@ import {
   type DealReminderPopupItem,
   type PoReminderPopupItem,
 } from "@/app/deal-reminder-popup";
+import { DealFormShell } from "@/app/deal-form-shell";
 import { PoCompletionCheckbox } from "@/app/po-completion-checkbox";
 import {
   daysUntil,
@@ -48,6 +49,7 @@ import {
   trafficLightLabel,
 } from "@/lib/deals";
 import { getSessionUser, isAuthConfigured } from "@/lib/auth0";
+import { dealCustomers, isHartmannCustomer } from "@/lib/customers";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -132,7 +134,7 @@ export default async function Home({
   const etaWeek = deals.filter((deal) => getPoSchedules(deal).some((po) => po.number && isWithinDays(po.eta, 7)));
   const etdWeek = deals.filter((deal) => getPoSchedules(deal).some((po) => po.number && isWithinDays(po.etd, 7)));
   const dueToday = deals.filter((deal) => daysUntil(deal.bearbeitenBis) === 0);
-  const missingEta = deals.filter((deal) => !deal.eta && !deal.etaUnbekannt);
+  const missingEta = deals.filter((deal) => !isHartmannCustomer(deal.kunde) && !deal.eta && !deal.etaUnbekannt);
   const poReminders = buildPoReminders(deals);
   const dealReminders: DealReminderPopupItem[] = deals.flatMap((deal) =>
     deal.reminders.filter((reminder) => reminder.systemKey === null).map((reminder) => ({
@@ -493,6 +495,7 @@ function CompactDealTable({
         <tbody className="divide-y divide-[#edf1f5]">
           {deals.map((deal) => {
             const light = getTrafficLight(deal);
+            const hartmann = isHartmannCustomer(deal.kunde);
             return (
               <Fragment key={deal.id}>
                 <tr
@@ -505,19 +508,33 @@ function CompactDealTable({
                 >
                   <td className="min-w-[300px] px-3 py-4">
                     <div className="space-y-1.5 font-semibold leading-5 text-[#7a284f]">
-                      <p>{deal.marke || "-"}</p>
-                      <p>{deal.kunde}</p>
-                      <p>{deal.dealnummer || "-"}</p>
-                      <p>{deal.ausmusterung || "-"}</p>
-                      <p className="whitespace-pre-line">{deal.artikel}</p>
-                      <p>LT: {deal.liefertermin || "-"}</p>
-                      <p>CRD: {deal.crdZeitfenster || "-"}</p>
+                      {hartmann ? (
+                        <>
+                          <p>{deal.kunde}</p>
+                          <p className="whitespace-pre-line">{deal.artikel}</p>
+                          <p>LT: {deal.liefertermin || "-"}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p>{deal.marke || "-"}</p>
+                          <p>{deal.kunde}</p>
+                          <p>{deal.dealnummer || "-"}</p>
+                          <p>{deal.ausmusterung || "-"}</p>
+                          <p className="whitespace-pre-line">{deal.artikel}</p>
+                          <p>LT: {deal.liefertermin || "-"}</p>
+                          <p>CRD: {deal.crdZeitfenster || "-"}</p>
+                        </>
+                      )}
                     </div>
                   </td>
                   <td className="px-3 py-4">
-                    <p>{deal.stueckzahl || "-"}</p>
-                    <p className="mt-1 text-xs text-[#746d63]">Preis: {deal.preis || "-"}</p>
-                    <p className="mt-1 text-xs text-[#746d63]">Warenwert: {deal.warenwert || "-"}</p>
+                    {hartmann ? null : (
+                      <>
+                        <p>{deal.stueckzahl || "-"}</p>
+                        <p className="mt-1 text-xs text-[#746d63]">Preis: {deal.preis || "-"}</p>
+                        <p className="mt-1 text-xs text-[#746d63]">Warenwert: {deal.warenwert || "-"}</p>
+                      </>
+                    )}
                   </td>
                   <td className="min-w-[330px] px-3 py-4"><PoOverview deal={deal} /></td>
                   <td className="px-3 py-4">
@@ -562,6 +579,15 @@ function CompactDealTable({
 }
 
 function PoOverview({ deal }: { deal: Deal }) {
+  if (isHartmannCustomer(deal.kunde)) {
+    return (
+      <div className="rounded-md border border-transparent bg-[#faf8f3] px-3 py-2 text-xs">
+        <span className="font-semibold text-[#5b554d]">PO</span>
+        <span className="ml-3 font-semibold text-[#2a241d]">{deal.po || "-"}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-2">
       {getPoSchedules(deal).map((po) => (
@@ -599,7 +625,7 @@ function DealDetails({ deal, open = false }: { deal: DealWithRelations; open?: b
           <DealForm action={updateDeal.bind(null, deal.id)} deal={deal} submitLabel="Änderungen speichern" />
         </div>
         <div className="space-y-4">
-          <DocumentStatusGrid deal={deal} />
+          {isHartmannCustomer(deal.kunde) ? null : <DocumentStatusGrid deal={deal} />}
           <DealReminderPanel deal={deal} />
           <NotesPanel deal={deal} />
           <ChangeHistory changes={deal.changes} />
@@ -615,6 +641,8 @@ function DealDetails({ deal, open = false }: { deal: DealWithRelations; open?: b
 }
 
 function DealSignals({ deal }: { deal: DealWithRelations }) {
+  if (isHartmannCustomer(deal.kunde)) return null;
+
   const signals = [
     !deal.eta && !deal.etaUnbekannt ? { label: "ETA fehlt", tone: "yellow" } : null,
     !deal.eta && deal.etaUnbekannt ? { label: "ETA bewusst offen", tone: "neutral" } : null,
@@ -646,13 +674,13 @@ function DealForm({
   deal?: Deal;
 }) {
   return (
-    <form action={action} className="mt-4 grid gap-4">
+    <DealFormShell action={action} defaultCustomer={deal?.kunde}>
       <SectionTitle icon={<ClipboardList size={17} />} title="Deal-Grunddaten" />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <Field name="kunde" label="Kunde" required defaultValue={deal?.kunde} placeholder="Lidl, Kaufland..." />
-        <Field name="marke" label="Marke" defaultValue={deal?.marke} placeholder="Silvercrest, Sanitas..." />
-        <Field name="dealnummer" label="LIDL Deal Nummer" defaultValue={deal?.dealnummer} />
-        <Field name="ausmusterung" label="Ausmusterung" defaultValue={deal?.ausmusterung} placeholder="Datum, KW oder Hinweis" />
+        <CustomerSelect defaultValue={deal?.kunde} />
+        <Field className="hartmann-hide" name="marke" label="Marke" defaultValue={deal?.marke} placeholder="Silvercrest, Sanitas..." />
+        <Field className="hartmann-hide" name="dealnummer" label="LIDL Deal Nummer" defaultValue={deal?.dealnummer} />
+        <Field className="hartmann-hide" name="ausmusterung" label="Ausmusterung" defaultValue={deal?.ausmusterung} placeholder="Datum, KW oder Hinweis" />
         <Textarea
           name="artikel"
           label="Artikel"
@@ -662,18 +690,21 @@ function DealForm({
           defaultValue={deal?.artikel}
         />
         <Field name="liefertermin" label="Liefertermin / KW" defaultValue={deal?.liefertermin} />
-        <Field name="crdZeitfenster" label="CRD Window" defaultValue={deal?.crdZeitfenster} />
-        <Field name="stueckzahl" label="Stückzahl" defaultValue={deal?.stueckzahl} />
-        <Field name="preis" label="Preis" defaultValue={deal?.preis} />
-        <Field name="warenwert" label="Warenwert" defaultValue={deal?.warenwert} />
-        <Field name="marge" label="Marge" defaultValue={deal?.marge} />
-        <Field name="bearbeitenBis" label="Bearbeiten bis" type="date" defaultValue={inputDate(deal?.bearbeitenBis)} />
+        <Field className="hartmann-hide" name="crdZeitfenster" label="CRD Window" defaultValue={deal?.crdZeitfenster} />
+        <Field className="hartmann-hide" name="stueckzahl" label="Stückzahl" defaultValue={deal?.stueckzahl} />
+        <Field className="hartmann-hide" name="preis" label="Preis" defaultValue={deal?.preis} />
+        <Field className="hartmann-hide" name="warenwert" label="Warenwert" defaultValue={deal?.warenwert} />
+        <Field className="hartmann-hide" name="marge" label="Marge" defaultValue={deal?.marge} />
+        <Field className="hartmann-hide" name="bearbeitenBis" label="Bearbeiten bis" type="date" defaultValue={inputDate(deal?.bearbeitenBis)} />
       </div>
 
-      <SectionTitle icon={<Ship size={17} />} title="POs und Termine" />
-      <div className="grid gap-3 xl:grid-cols-2">
+      <div className="hartmann-hide"><SectionTitle icon={<Ship size={17} />} title="POs und Termine" /></div>
+      <div className="hartmann-only"><SectionTitle icon={<Ship size={17} />} title="PO" /></div>
+      <div className="hartmann-po-grid grid gap-3 xl:grid-cols-2">
         <PoInputBlock
           title="PO Mass Production"
+          hartmannTitle="PO"
+          compactForHartmann
           poName="po"
           poValue={deal?.po}
           etdName="etd"
@@ -683,56 +714,66 @@ function DealForm({
           etaUnknownName="etaUnbekannt"
           etaUnknown={deal?.etaUnbekannt}
         />
-        <PoInputBlock
-          title="PO Drittlandsware"
-          poName="drittlandswarePo"
-          poValue={deal?.drittlandswarePo}
-          etdName="drittlandswareEtd"
-          etdValue={deal?.drittlandswareEtd}
-          etaName="drittlandswareEta"
-          etaValue={deal?.drittlandswareEta}
-        />
-        <PoInputBlock
-          title="PO Fotomuster"
-          poName="fotomusterPo"
-          poValue={deal?.fotomusterPo}
-          etdName="fotomusterEtd"
-          etdValue={deal?.fotomusterEtd}
-          etaName="fotomusterEta"
-          etaValue={deal?.fotomusterEta}
-        />
-        <PoInputBlock
-          title="PO QS Muster"
-          poName="qsMusterPo"
-          poValue={deal?.qsMusterPo}
-          etdName="qsMusterEtd"
-          etdValue={deal?.qsMusterEtd}
-          etaName="qsMusterEta"
-          etaValue={deal?.qsMusterEta}
-        />
-        <PoInputBlock
-          title="PO Serviceware"
-          poName="servicewarePo"
-          poValue={deal?.servicewarePo}
-          etdName="servicewareEtd"
-          etdValue={deal?.servicewareEtd}
-          etaName="servicewareEta"
-          etaValue={deal?.servicewareEta}
-        />
+        <div className="hartmann-hide">
+          <PoInputBlock
+            title="PO Drittlandsware"
+            poName="drittlandswarePo"
+            poValue={deal?.drittlandswarePo}
+            etdName="drittlandswareEtd"
+            etdValue={deal?.drittlandswareEtd}
+            etaName="drittlandswareEta"
+            etaValue={deal?.drittlandswareEta}
+          />
+        </div>
+        <div className="hartmann-hide">
+          <PoInputBlock
+            title="PO Fotomuster"
+            poName="fotomusterPo"
+            poValue={deal?.fotomusterPo}
+            etdName="fotomusterEtd"
+            etdValue={deal?.fotomusterEtd}
+            etaName="fotomusterEta"
+            etaValue={deal?.fotomusterEta}
+          />
+        </div>
+        <div className="hartmann-hide">
+          <PoInputBlock
+            title="PO QS Muster"
+            poName="qsMusterPo"
+            poValue={deal?.qsMusterPo}
+            etdName="qsMusterEtd"
+            etdValue={deal?.qsMusterEtd}
+            etaName="qsMusterEta"
+            etaValue={deal?.qsMusterEta}
+          />
+        </div>
+        <div className="hartmann-hide">
+          <PoInputBlock
+            title="PO Serviceware"
+            poName="servicewarePo"
+            poValue={deal?.servicewarePo}
+            etdName="servicewareEtd"
+            etdValue={deal?.servicewareEtd}
+            etaName="servicewareEta"
+            etaValue={deal?.servicewareEta}
+          />
+        </div>
       </div>
 
-      <SectionTitle icon={<FileCheck2 size={17} />} title="Prozessdokumente" />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <ProcessDocumentCheckbox name="dokumentenDrafts" label="Dokumenten Drafts" status={deal?.dokumentenDrafts} />
-        <ProcessDocumentCheckbox name="verschiffungspapiere" label="Verschiffungspapiere" status={deal?.verschiffungspapiere} />
-        <ProcessDocumentCheckbox name="telexBl" label="Telex B/L" status={deal?.telexBl} />
-        <ProcessDocumentCheckbox name="proformaDrittlandsware" label="Proforma Rechnung Drittlandsware" status={deal?.proformaDrittlandsware} />
-        <ProcessDocumentCheckbox name="inspektion100" label="100% Inspektion" status={deal?.inspektion100} />
-        <ProcessDocumentCheckbox name="shipmentRelease" label="Shipment Release" status={deal?.shipmentRelease} />
-        <ProcessDocumentCheckbox name="releaseDocument" label="Release Document" status={deal?.releaseDocument} />
-        <ProcessDocumentCheckbox name="h1Document" label="H1 Document" status={deal?.h1Document} />
-        <ProcessDocumentCheckbox name="t1Document" label="T1 Document" status={deal?.t1Document} />
-        <ProcessDocumentCheckbox name="entladebericht" label="Entladebericht" status={deal?.entladebericht} />
+      <div className="hartmann-hide grid gap-4">
+        <SectionTitle icon={<FileCheck2 size={17} />} title="Prozessdokumente" />
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <ProcessDocumentCheckbox name="dokumentenDrafts" label="Dokumenten Drafts" status={deal?.dokumentenDrafts} />
+          <ProcessDocumentCheckbox name="verschiffungspapiere" label="Verschiffungspapiere" status={deal?.verschiffungspapiere} />
+          <ProcessDocumentCheckbox name="telexBl" label="Telex B/L" status={deal?.telexBl} />
+          <ProcessDocumentCheckbox name="proformaDrittlandsware" label="Proforma Rechnung Drittlandsware" status={deal?.proformaDrittlandsware} />
+          <ProcessDocumentCheckbox name="inspektion100" label="100% Inspektion" status={deal?.inspektion100} />
+          <ProcessDocumentCheckbox name="shipmentRelease" label="Shipment Release" status={deal?.shipmentRelease} />
+          <ProcessDocumentCheckbox name="releaseDocument" label="Release Document" status={deal?.releaseDocument} />
+          <ProcessDocumentCheckbox name="h1Document" label="H1 Document" status={deal?.h1Document} />
+          <ProcessDocumentCheckbox name="t1Document" label="T1 Document" status={deal?.t1Document} />
+          <ProcessDocumentCheckbox name="entladebericht" label="Entladebericht" status={deal?.entladebericht} />
+        </div>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
@@ -743,7 +784,7 @@ function DealForm({
       <button className="h-11 rounded-md bg-[#4f6138] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#41522e]" type="submit">
         {submitLabel}
       </button>
-    </form>
+    </DealFormShell>
   );
 }
 
@@ -758,6 +799,8 @@ function PoInputBlock({
   required = false,
   etaUnknownName,
   etaUnknown = false,
+  hartmannTitle,
+  compactForHartmann = false,
 }: {
   title: string;
   poName: string;
@@ -769,17 +812,22 @@ function PoInputBlock({
   required?: boolean;
   etaUnknownName?: string;
   etaUnknown?: boolean;
+  hartmannTitle?: string;
+  compactForHartmann?: boolean;
 }) {
   return (
     <section className="rounded-md border border-[#e4ddd2] bg-[#faf8f3] p-3">
-      <h3 className="text-sm font-semibold text-[#2a241d]">{title}</h3>
+      <h3 className="text-sm font-semibold text-[#2a241d]">
+        <span className={compactForHartmann ? "hartmann-hide" : undefined}>{title}</span>
+        {hartmannTitle ? <span className="hartmann-only">{hartmannTitle}</span> : null}
+      </h3>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <Field name={poName} label="PO Nummer" required={required} defaultValue={poValue} />
-        <Field name={etdName} label="ETD" type="date" required={required} defaultValue={inputDate(etdValue)} />
-        <Field name={etaName} label="ETA" type="date" defaultValue={inputDate(etaValue)} />
+        <Field className={compactForHartmann ? "hartmann-hide" : undefined} name={etdName} label="ETD" type="date" required={required} defaultValue={inputDate(etdValue)} />
+        <Field className={compactForHartmann ? "hartmann-hide" : undefined} name={etaName} label="ETA" type="date" defaultValue={inputDate(etaValue)} />
       </div>
       {etaUnknownName ? (
-        <label className="mt-3 flex items-center gap-2 text-sm font-medium text-[#5b554d]">
+        <label className={clsx("mt-3 items-center gap-2 text-sm font-medium text-[#5b554d]", compactForHartmann ? "hartmann-hide flex" : "flex")}>
           <input name={etaUnknownName} type="checkbox" defaultChecked={etaUnknown} />
           ETA bewusst unbekannt
         </label>
@@ -1087,6 +1135,7 @@ function Field({
   type = "text",
   placeholder,
   required = false,
+  className,
 }: {
   name: string;
   label: string;
@@ -1094,9 +1143,10 @@ function Field({
   type?: string;
   placeholder?: string;
   required?: boolean;
+  className?: string;
 }) {
   return (
-    <label className="grid gap-1 text-sm font-medium text-[#5b554d]">
+    <label className={clsx("grid gap-1 text-sm font-medium text-[#5b554d]", className)}>
       {label}
       <input
         name={name}
@@ -1106,6 +1156,26 @@ function Field({
         placeholder={placeholder}
         className="h-10 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 text-sm text-[#2a241d] outline-none focus:border-[#6f7d4b]"
       />
+    </label>
+  );
+}
+
+function CustomerSelect({ defaultValue }: { defaultValue?: string | null }) {
+  const isLegacyValue = Boolean(defaultValue && !dealCustomers.includes(defaultValue as (typeof dealCustomers)[number]));
+
+  return (
+    <label className="grid gap-1 text-sm font-medium text-[#5b554d]">
+      Kunde
+      <select
+        name="kunde"
+        required
+        defaultValue={defaultValue ?? ""}
+        className="h-10 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 text-sm text-[#2a241d] outline-none focus:border-[#6f7d4b]"
+      >
+        <option value="" disabled>Bitte auswählen</option>
+        {isLegacyValue ? <option value={defaultValue ?? ""}>{defaultValue} (Bestandswert)</option> : null}
+        {dealCustomers.map((customer) => <option key={customer} value={customer}>{customer}</option>)}
+      </select>
     </label>
   );
 }

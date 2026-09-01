@@ -40,3 +40,19 @@ textarea {
 .crm-soft-pulse {
   animation: crm-soft-pulse 2.8s ease-in-out infinite;
 }
+
+.hartmann-only {
+  display: none;
+}
+
+.deal-form[data-hartmann="true"] .hartmann-hide {
+  display: none;
+}
+
+.deal-form[data-hartmann="true"] .hartmann-only {
+  display: block;
+}
+
+.deal-form[data-hartmann="true"] .hartmann-po-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
