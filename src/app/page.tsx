@@ -73,7 +73,7 @@ async function loadDeals(): Promise<DealWithRelations[]> {
         notes: { orderBy: { createdAt: "desc" }, take: 4 },
         changes: { orderBy: { createdAt: "desc" }, take: 6 },
       },
-      orderBy: [{ eta: "asc" }, { bearbeitenBis: "asc" }, { updatedAt: "desc" }],
+      orderBy: [{ eta: "asc" }, { bearbeitenBis: "asc" }, { createdAt: "desc" }],
     });
   } catch {
     return [];
@@ -288,7 +288,7 @@ function DealsView({
     <section className="rounded-lg border border-[#e4ddd2] bg-[#fffdf8]">
       <PanelHeader icon={<ClipboardList size={18} />} title="Deal-Übersicht" detail={`${deals.length} von ${allDeals.length} Deals`} />
       <Filters params={params} />
-      <CompactDealTable deals={sortByUrgency(deals)} empty="Keine Deals für diese Filter." showDetails={!embedded} />
+      <CompactDealTable deals={sortByAusmusterung(deals)} empty="Keine Deals für diese Filter." showDetails={!embedded} />
     </section>
   );
 }
@@ -346,7 +346,7 @@ function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: S
 }
 
 function Filters({ params }: { params: Search }) {
-  const presets = ["Silvercrest", "Sanitas", "Kaufland", "Hartmann"];
+  const presets = ["Sensiplast", "Sanitas", "Kaufland", "Hartmann"];
 
   return (
     <div className="border-b border-[#e4ddd2] p-4">
@@ -1092,6 +1092,67 @@ function sortByUrgency(deals: DealWithRelations[]) {
     if (lightDiff !== 0) return lightDiff;
     return (a.bearbeitenBis?.getTime() ?? a.eta?.getTime() ?? 9e15) - (b.bearbeitenBis?.getTime() ?? b.eta?.getTime() ?? 9e15);
   });
+}
+
+function sortByAusmusterung(deals: DealWithRelations[]) {
+  return [...deals].sort((a, b) => {
+    const aDate = parseAusmusterungDate(a.ausmusterung);
+    const bDate = parseAusmusterungDate(b.ausmusterung);
+
+    if (aDate !== null || bDate !== null) {
+      if (aDate === null) return 1;
+      if (bDate === null) return -1;
+      if (aDate !== bDate) return bDate - aDate;
+    } else {
+      const aText = a.ausmusterung?.trim() ?? "";
+      const bText = b.ausmusterung?.trim() ?? "";
+      if (aText && !bText) return -1;
+      if (!aText && bText) return 1;
+      if (aText && bText) {
+        const textDiff = bText.localeCompare(aText, "de", { numeric: true, sensitivity: "base" });
+        if (textDiff !== 0) return textDiff;
+      }
+    }
+
+    const createdDiff = b.createdAt.getTime() - a.createdAt.getTime();
+    if (createdDiff !== 0) return createdDiff;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function parseAusmusterungDate(value?: string | null) {
+  if (!value) return null;
+  const text = value.trim();
+
+  const isoDate = text.match(/\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
+  if (isoDate) {
+    return validUtcDate(Number(isoDate[1]), Number(isoDate[2]), Number(isoDate[3]));
+  }
+
+  const germanDate = text.match(/\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})\b/);
+  if (germanDate) {
+    return validUtcDate(Number(germanDate[3]), Number(germanDate[2]), Number(germanDate[1]));
+  }
+
+  const calendarWeek = text.match(/\bKW\s*(\d{1,2})(?:\s*[-/.]\s*|\s+)(\d{4})\b/i);
+  if (calendarWeek) {
+    const week = Number(calendarWeek[1]);
+    const year = Number(calendarWeek[2]);
+    if (week < 1 || week > 53) return null;
+    const fourthOfJanuary = new Date(Date.UTC(year, 0, 4));
+    const weekday = (fourthOfJanuary.getUTCDay() + 6) % 7;
+    return Date.UTC(year, 0, 4 - weekday + (week - 1) * 7);
+  }
+
+  return null;
+}
+
+function validUtcDate(year: number, month: number, day: number) {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return null;
+  }
+  return date.getTime();
 }
 
 function relativeDate(value?: Date | null) {

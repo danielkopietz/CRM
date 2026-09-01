@@ -17,7 +17,7 @@ Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsproz
 - Einfache Erledigt-Checkboxen fuer Drafts, Verschiffungspapiere, Telex B/L, Proforma Drittlandsware, 100% Inspektion, Shipment Release, Release Document, H1, T1 und Entladebericht
 - Automatische Aenderungshistorie fuer Menge, Preis, ETD und ETA
 - Dynamische Erinnerungen drei Tage vor allen ETDs, 14 Tage vor Mass-Production-/Drittlandsware-ETA fuer die Verzollung und drei Tage vor ETA fuer H1/T1
-- Fertige Uebersichten fuer Silvercrest, Sanitas, Kaufland und Hartmann
+- Fertige Uebersichten fuer Sensiplast, Sanitas, Kaufland und Hartmann
 - Dockerfile fuer Coolify
 
 ## Ampelregeln
@@ -36,6 +36,7 @@ Die Uebersicht ist als Arbeitsliste fuer internationale Einkaeufer aufgebaut:
 - Kompakte Keyfacts-Spalte fuer Marke, Kunde, Dealnummer, Ausmusterung, Artikel, Liefertermin und CRD Window
 - Mehrzeilige Artikelangaben sowie eine breite Erfassungsansicht ohne horizontal abgeschnittene Inhalte
 - Dauerhaft speicherbare Erledigt-Checkboxen fuer jede PO-Zeile in der Uebersicht
+- Stabile Deal-Sortierung nach Ausmusterung; PO-Haekchen veraendern die Reihenfolge nicht
 - Dezente Reminder-Box unten links fuer Deals, die Aufmerksamkeit brauchen
 
 ## Lokale Entwicklung
