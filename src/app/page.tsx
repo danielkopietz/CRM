@@ -402,7 +402,7 @@ function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: S
 }
 
 function Filters({ params }: { params: Search }) {
-  const presets = ["Sensiplast", "Sanitas", "Kaufland", "Hartmann"];
+  const presets = ["Sensiplast", "Sanitas", "Kaufland", "Hartmann", "Private Label"];
 
   return (
     <div className="border-b border-[#e4ddd2] p-4">
