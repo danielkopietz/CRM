@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CRM Verzollung",
+  title: "Private Label Deals",
   description: "Deal-Tracking und Fristen-Cockpit fuer Verzollungen.",
 };
 

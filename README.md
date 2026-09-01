@@ -1,4 +1,4 @@
-# CRM Verzollung
+# Private Label Deals
 
 Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsprozesse.
 
@@ -8,6 +8,7 @@ Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsproz
 - PostgreSQL Datenbank ueber Prisma
 - Deals fuer Lidl, Kaufland, Hartmann usw. anlegen und bearbeiten
 - Feste Kundenauswahl fuer Sensiplast, Sanitas, Kaufland, Hartmann und Private Label; Hartmann-Deals nutzen eine reduzierte Erfassung fuer Artikel, Liefertermin, eine PO, naechsten Schritt und aktuellen Status
+- Hartmann-POs enthalten ETD und ETA mit denselben automatischen Erinnerungen wie alle anderen Deals
 - Felder fuer Marke, Artikel, Menge, Preis, LIDL Dealnummer, Ausmusterung, CRD, Liefertermin und Notizen
 - Eigene PO-Nummer, ETD und ETA fuer Mass Production, Drittlandsware, Fotomuster, QS Muster und Serviceware
 - Status: Neu, In Klaerung, PO offen, Muster offen, Produktion, Verschifft, Verzollung vorbereiten, Beim Zoll, Freigegeben, Abgeschlossen, Problem / Rot
@@ -20,6 +21,7 @@ Webbasiertes Deal- und Fristen-Cockpit fuer Import-, Fracht- und Verzollungsproz
 - Dynamische Erinnerungen drei Tage vor allen ETDs, 14 Tage vor Mass-Production-/Drittlandsware-ETA fuer die Verzollung und drei Tage vor ETA fuer H1/T1, jeweils mit Zum Deal, 15 Minuten spaeter und Erledigt
 - Beliebig viele individuelle Erinnerungen pro Deal mit Kalendereintrag und faelligem Pop-up unten links (Zum Deal, 15 Minuten spaeter, Erledigt)
 - Fertige Uebersichten fuer Sensiplast, Sanitas, Kaufland und Hartmann
+- Abgeschlossene Deals werden ueber „Deal ueberlebt“ in die fertige Archiv-Uebersicht verschoben
 - Dockerfile fuer Coolify
 
 ## Ampelregeln

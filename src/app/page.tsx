@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   BellRing,
   CalendarClock,
+  CheckCircle2,
   CirclePlus,
   ClipboardList,
   FileCheck2,
@@ -23,6 +24,7 @@ import { Fragment } from "react";
 import clsx from "clsx";
 import {
   addNote,
+  completeDeal,
   completeDealReminder,
   createDeal,
   createDealReminder,
@@ -123,20 +125,21 @@ export default async function Home({
   }
 
   const deals = await loadDeals();
+  const activeDeals = deals.filter((deal) => deal.status !== "ABGESCHLOSSEN");
   const filteredDeals = filterDeals(deals, params);
-  const criticalDeals = sortByUrgency(deals).filter((deal) => {
+  const criticalDeals = sortByUrgency(activeDeals).filter((deal) => {
     const light = getTrafficLight(deal);
     return light === "red" || light === "yellow";
   });
 
-  const redDeals = deals.filter((deal) => getTrafficLight(deal) === "red");
-  const yellowDeals = deals.filter((deal) => getTrafficLight(deal) === "yellow");
-  const etaWeek = deals.filter((deal) => getPoSchedules(deal).some((po) => po.number && isWithinDays(po.eta, 7)));
-  const etdWeek = deals.filter((deal) => getPoSchedules(deal).some((po) => po.number && isWithinDays(po.etd, 7)));
-  const dueToday = deals.filter((deal) => daysUntil(deal.bearbeitenBis) === 0);
-  const missingEta = deals.filter((deal) => !isHartmannCustomer(deal.kunde) && !deal.eta && !deal.etaUnbekannt);
-  const poReminders = buildPoReminders(deals);
-  const dealReminders: DealReminderPopupItem[] = deals.flatMap((deal) =>
+  const redDeals = activeDeals.filter((deal) => getTrafficLight(deal) === "red");
+  const yellowDeals = activeDeals.filter((deal) => getTrafficLight(deal) === "yellow");
+  const etaWeek = activeDeals.filter((deal) => getPoSchedules(deal).some((po) => po.number && isWithinDays(po.eta, 7)));
+  const etdWeek = activeDeals.filter((deal) => getPoSchedules(deal).some((po) => po.number && isWithinDays(po.etd, 7)));
+  const dueToday = activeDeals.filter((deal) => daysUntil(deal.bearbeitenBis) === 0);
+  const missingEta = activeDeals.filter((deal) => !deal.eta && !deal.etaUnbekannt);
+  const poReminders = buildPoReminders(activeDeals);
+  const dealReminders: DealReminderPopupItem[] = activeDeals.flatMap((deal) =>
     deal.reminders.filter((reminder) => reminder.systemKey === null).map((reminder) => ({
       id: reminder.id,
       dealId: deal.id,
@@ -162,9 +165,9 @@ export default async function Home({
         <div className="mx-auto max-w-[1560px] px-5 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm font-medium text-[#746d63]">Verzollung CRM · Einkauf 2026</p>
+              <p className="text-sm font-medium text-[#746d63]">Einkauf 2026</p>
               <h1 className="mt-1 font-serif text-4xl font-medium tracking-normal text-[#17130f] md:text-5xl">
-                China Deals - Übersicht
+                Private Label Deals
               </h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -253,7 +256,7 @@ function LoginScreen() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f4efe7] px-5">
       <section className="w-full max-w-md rounded-lg border border-[#e4ddd2] bg-[#fffdf8] p-6 shadow-sm">
-        <p className="text-sm font-medium text-[#746d63]">Verzollung CRM</p>
+        <p className="text-sm font-medium text-[#746d63]">Private Label Deals</p>
         <h1 className="mt-2 font-serif text-3xl font-medium text-[#17130f]">Bitte anmelden</h1>
         <p className="mt-3 text-sm leading-6 text-[#746d63]">
           Nach dem Login siehst du alle Deals, PO-Termine, Dokumente und Notizen.
@@ -402,7 +405,7 @@ function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: S
 }
 
 function Filters({ params }: { params: Search }) {
-  const presets = ["Sensiplast", "Sanitas", "Kaufland", "Hartmann", "Private Label"];
+  const presets = ["Sensiplast", "Sanitas", "Kaufland", "Hartmann", "Private Label", "Archiv"];
 
   return (
     <div className="border-b border-[#e4ddd2] p-4">
@@ -579,23 +582,16 @@ function CompactDealTable({
 }
 
 function PoOverview({ deal }: { deal: Deal }) {
-  if (isHartmannCustomer(deal.kunde)) {
-    return (
-      <div className="rounded-md border border-transparent bg-[#faf8f3] px-3 py-2 text-xs">
-        <span className="font-semibold text-[#5b554d]">PO</span>
-        <span className="ml-3 font-semibold text-[#2a241d]">{deal.po || "-"}</span>
-      </div>
-    );
-  }
+  const schedules = isHartmannCustomer(deal.kunde) ? getPoSchedules(deal).slice(0, 1) : getPoSchedules(deal);
 
   return (
     <div className="grid gap-2">
-      {getPoSchedules(deal).map((po) => (
+      {schedules.map((po) => (
         <div
           key={po.key}
           className="grid grid-cols-[112px_1fr_auto] items-center gap-2 rounded-md border border-transparent bg-[#faf8f3] px-2 py-1.5 text-xs transition-colors has-[input:checked]:border-emerald-200 has-[input:checked]:bg-emerald-100"
         >
-          <span className="font-semibold text-[#5b554d]">{po.shortLabel}</span>
+          <span className="font-semibold text-[#5b554d]">{isHartmannCustomer(deal.kunde) ? "PO" : po.shortLabel}</span>
           <span className="min-w-0">
             <span className="block truncate font-semibold text-[#2a241d]">PO {po.number || "-"}</span>
             <span className="mt-0.5 block text-[#746d63]">
@@ -629,11 +625,24 @@ function DealDetails({ deal, open = false }: { deal: DealWithRelations; open?: b
           <DealReminderPanel deal={deal} />
           <NotesPanel deal={deal} />
           <ChangeHistory changes={deal.changes} />
-          <form action={deleteDeal.bind(null, deal.id)}>
-            <button className="inline-flex h-10 items-center gap-2 rounded-md border border-rose-200 px-3 text-sm font-semibold text-rose-700" type="submit">
-              <Trash2 size={15} /> Deal löschen
-            </button>
-          </form>
+          <div className="flex flex-wrap items-center gap-2">
+            <form action={deleteDeal.bind(null, deal.id)}>
+              <button className="inline-flex h-10 items-center gap-2 rounded-md border border-rose-200 px-3 text-sm font-semibold text-rose-700" type="submit">
+                <Trash2 size={15} /> Deal löschen
+              </button>
+            </form>
+            {deal.status === "ABGESCHLOSSEN" ? (
+              <span className="inline-flex h-10 items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-700">
+                <CheckCircle2 size={15} /> Abgeschlossen
+              </span>
+            ) : (
+              <form action={completeDeal.bind(null, deal.id)}>
+                <button className="inline-flex h-10 items-center gap-2 rounded-md bg-emerald-600 px-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700" type="submit">
+                  <CheckCircle2 size={15} /> Deal überlebt
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       </div>
     </details>
@@ -641,8 +650,6 @@ function DealDetails({ deal, open = false }: { deal: DealWithRelations; open?: b
 }
 
 function DealSignals({ deal }: { deal: DealWithRelations }) {
-  if (isHartmannCustomer(deal.kunde)) return null;
-
   const signals = [
     !deal.eta && !deal.etaUnbekannt ? { label: "ETA fehlt", tone: "yellow" } : null,
     !deal.eta && deal.etaUnbekannt ? { label: "ETA bewusst offen", tone: "neutral" } : null,
@@ -704,7 +711,6 @@ function DealForm({
         <PoInputBlock
           title="PO Mass Production"
           hartmannTitle="PO"
-          compactForHartmann
           poName="po"
           poValue={deal?.po}
           etdName="etd"
@@ -800,7 +806,6 @@ function PoInputBlock({
   etaUnknownName,
   etaUnknown = false,
   hartmannTitle,
-  compactForHartmann = false,
 }: {
   title: string;
   poName: string;
@@ -813,21 +818,20 @@ function PoInputBlock({
   etaUnknownName?: string;
   etaUnknown?: boolean;
   hartmannTitle?: string;
-  compactForHartmann?: boolean;
 }) {
   return (
     <section className="rounded-md border border-[#e4ddd2] bg-[#faf8f3] p-3">
       <h3 className="text-sm font-semibold text-[#2a241d]">
-        <span className={compactForHartmann ? "hartmann-hide" : undefined}>{title}</span>
+        <span className={hartmannTitle ? "hartmann-hide" : undefined}>{title}</span>
         {hartmannTitle ? <span className="hartmann-only">{hartmannTitle}</span> : null}
       </h3>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <Field name={poName} label="PO Nummer" required={required} defaultValue={poValue} />
-        <Field className={compactForHartmann ? "hartmann-hide" : undefined} name={etdName} label="ETD" type="date" required={required} defaultValue={inputDate(etdValue)} />
-        <Field className={compactForHartmann ? "hartmann-hide" : undefined} name={etaName} label="ETA" type="date" defaultValue={inputDate(etaValue)} />
+        <Field name={etdName} label="ETD" type="date" required={required} defaultValue={inputDate(etdValue)} />
+        <Field name={etaName} label="ETA" type="date" defaultValue={inputDate(etaValue)} />
       </div>
       {etaUnknownName ? (
-        <label className={clsx("mt-3 items-center gap-2 text-sm font-medium text-[#5b554d]", compactForHartmann ? "hartmann-hide flex" : "flex")}>
+        <label className="mt-3 flex items-center gap-2 text-sm font-medium text-[#5b554d]">
           <input name={etaUnknownName} type="checkbox" defaultChecked={etaUnknown} />
           ETA bewusst unbekannt
         </label>
@@ -1231,8 +1235,12 @@ function filterDeals(deals: DealWithRelations[], params: Search) {
   const q = (params.q ?? "").toLowerCase();
   const kunde = (params.kunde ?? "").toLowerCase();
   const preset = (params.preset ?? "").toLowerCase();
+  const archiveSelected = preset === "archiv";
 
   return deals.filter((deal) => {
+    if (archiveSelected && deal.status !== "ABGESCHLOSSEN") return false;
+    if (!archiveSelected && deal.status === "ABGESCHLOSSEN") return false;
+
     const haystack = [
       deal.kunde,
       deal.marke,
@@ -1254,7 +1262,7 @@ function filterDeals(deals: DealWithRelations[], params: Search) {
 
     if (q && !haystack.includes(q)) return false;
     if (kunde && !deal.kunde.toLowerCase().includes(kunde)) return false;
-    if (preset && ![deal.kunde, deal.marke].filter(Boolean).some((value) => value?.toLowerCase().includes(preset))) return false;
+    if (preset && !archiveSelected && ![deal.kunde, deal.marke].filter(Boolean).some((value) => value?.toLowerCase().includes(preset))) return false;
     if (params.status && deal.status !== params.status) return false;
     if (params.ampel && getTrafficLight(deal) !== params.ampel) return false;
     return true;

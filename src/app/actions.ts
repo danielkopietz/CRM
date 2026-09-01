@@ -41,9 +41,9 @@ function dealPayload(formData: FormData) {
   const liefertermin = optionalText(formData, "liefertermin");
   const po = optionalText(formData, "po");
   const hartmann = isHartmannCustomer(kunde);
-  const etd = hartmann ? null : optionalDate(formData, "etd");
-  const etaUnbekannt = hartmann ? false : checkbox(formData, "etaUnbekannt");
-  const eta = hartmann || etaUnbekannt ? null : optionalDate(formData, "eta");
+  const etd = optionalDate(formData, "etd");
+  const etaUnbekannt = checkbox(formData, "etaUnbekannt");
+  const eta = etaUnbekannt ? null : optionalDate(formData, "eta");
   const bearbeitenBis = hartmann ? null : optionalDate(formData, "bearbeitenBis");
 
   if (!kunde || !artikel) {
@@ -175,6 +175,15 @@ export async function addNote(dealId: string, formData: FormData) {
 
   await prisma.dealNote.create({
     data: { dealId, text },
+  });
+  revalidatePath("/");
+}
+
+export async function completeDeal(id: string) {
+  await requireUser();
+  await prisma.deal.updateMany({
+    where: { id, status: { not: "ABGESCHLOSSEN" } },
+    data: { status: "ABGESCHLOSSEN" },
   });
   revalidatePath("/");
 }
