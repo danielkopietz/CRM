@@ -21,6 +21,11 @@ function optionalDate(formData: FormData, key: string) {
   return value ? new Date(`${value}T00:00:00`) : null;
 }
 
+function optionalCalendarDate(formData: FormData, key: string) {
+  const value = optionalText(formData, key);
+  return value ? new Date(`${value}T12:00:00.000Z`) : null;
+}
+
 function checkbox(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
@@ -184,6 +189,87 @@ export async function setPoCompleted(dealId: string, poKey: string, formData: Fo
   if (!data) return;
   await prisma.deal.update({ where: { id: dealId }, data });
   revalidatePath("/");
+}
+
+export async function createDealReminder(dealId: string, formData: FormData) {
+  await requireUser();
+  const text = optionalText(formData, "text");
+  const dueDate = optionalCalendarDate(formData, "dueDate");
+  if (!text || !dueDate) return;
+
+  const deal = await prisma.deal.findUnique({ where: { id: dealId }, select: { id: true } });
+  if (!deal) return;
+
+  await prisma.dealReminder.create({
+    data: { dealId: deal.id, text, dueDate },
+  });
+  revalidatePath("/");
+}
+
+export async function snoozeDealReminder(reminderId: string) {
+  await requireUser();
+  await prisma.dealReminder.updateMany({
+    where: { id: reminderId, completedAt: null },
+    data: { snoozedUntil: new Date(Date.now() + 15 * 60 * 1000) },
+  });
+  revalidatePath("/");
+}
+
+export async function completeDealReminder(reminderId: string) {
+  await requireUser();
+  await prisma.dealReminder.updateMany({
+    where: { id: reminderId, completedAt: null },
+    data: { completedAt: new Date(), snoozedUntil: null },
+  });
+  revalidatePath("/");
+}
+
+export async function snoozePoReminder(reminderKey: string, dealId: string, dueDate: string) {
+  await requireUser();
+  const date = parseBoundCalendarDate(dueDate);
+  if (!date || !reminderKey.startsWith(`${dealId}-`)) return;
+  const deal = await prisma.deal.findUnique({ where: { id: dealId }, select: { id: true } });
+  if (!deal) return;
+
+  await prisma.dealReminder.upsert({
+    where: { systemKey: reminderKey },
+    update: { snoozedUntil: new Date(Date.now() + 15 * 60 * 1000), completedAt: null },
+    create: {
+      dealId: deal.id,
+      systemKey: reminderKey,
+      text: "Automatische PO-Erinnerung",
+      dueDate: date,
+      snoozedUntil: new Date(Date.now() + 15 * 60 * 1000),
+    },
+  });
+  revalidatePath("/");
+}
+
+export async function completePoReminder(reminderKey: string, dealId: string, dueDate: string) {
+  await requireUser();
+  const date = parseBoundCalendarDate(dueDate);
+  if (!date || !reminderKey.startsWith(`${dealId}-`)) return;
+  const deal = await prisma.deal.findUnique({ where: { id: dealId }, select: { id: true } });
+  if (!deal) return;
+
+  await prisma.dealReminder.upsert({
+    where: { systemKey: reminderKey },
+    update: { completedAt: new Date(), snoozedUntil: null },
+    create: {
+      dealId: deal.id,
+      systemKey: reminderKey,
+      text: "Automatische PO-Erinnerung",
+      dueDate: date,
+      completedAt: new Date(),
+    },
+  });
+  revalidatePath("/");
+}
+
+function parseBoundCalendarDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T12:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value ? date : null;
 }
 
 function stringifyChangeValue(value: string | Date | null | undefined) {

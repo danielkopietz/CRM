@@ -125,6 +125,7 @@ model Deal {
   updatedAt              DateTime       @updatedAt
   notes                  DealNote[]
   changes                DealChange[]
+  reminders              DealReminder[]
 
   @@index([kunde])
   @@index([status])
@@ -156,4 +157,22 @@ model DealChange {
 
   @@index([dealId])
   @@index([createdAt])
+}
+
+model DealReminder {
+  id           String    @id @default(cuid())
+  dealId       String
+  systemKey    String?   @unique
+  text         String
+  dueDate      DateTime
+  snoozedUntil DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deal         Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+  @@index([dueDate])
+  @@index([completedAt])
+  @@index([snoozedUntil])
 }

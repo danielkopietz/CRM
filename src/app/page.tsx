@@ -1,4 +1,4 @@
-import { Deal, DealChange, DealNote } from "@prisma/client";
+import { Deal, DealChange, DealNote, DealReminder } from "@prisma/client";
 import {
   AlertTriangle,
   BellRing,
@@ -21,7 +21,21 @@ import {
 import Link from "next/link";
 import { Fragment } from "react";
 import clsx from "clsx";
-import { addNote, createDeal, deleteDeal, setPoCompleted, updateDeal } from "@/app/actions";
+import {
+  addNote,
+  completeDealReminder,
+  createDeal,
+  createDealReminder,
+  deleteDeal,
+  setPoCompleted,
+  updateDeal,
+} from "@/app/actions";
+import {
+  DealReminderPopup,
+  PoReminderPopup,
+  type DealReminderPopupItem,
+  type PoReminderPopupItem,
+} from "@/app/deal-reminder-popup";
 import { PoCompletionCheckbox } from "@/app/po-completion-checkbox";
 import {
   daysUntil,
@@ -41,6 +55,7 @@ export const dynamic = "force-dynamic";
 type DealWithRelations = Deal & {
   notes: DealNote[];
   changes: DealChange[];
+  reminders: DealReminder[];
 };
 
 type Search = {
@@ -52,6 +67,7 @@ type Search = {
   month?: string;
   preset?: string;
   newDeal?: string;
+  deal?: string;
 };
 
 type PoReminder = {
@@ -62,6 +78,7 @@ type PoReminder = {
   date: Date;
   days: number;
   tone: "red" | "yellow" | "blue";
+  snoozedUntil?: Date | null;
 };
 
 async function loadDeals(): Promise<DealWithRelations[]> {
@@ -72,6 +89,15 @@ async function loadDeals(): Promise<DealWithRelations[]> {
       include: {
         notes: { orderBy: { createdAt: "desc" }, take: 4 },
         changes: { orderBy: { createdAt: "desc" }, take: 6 },
+        reminders: {
+          where: {
+            OR: [
+              { systemKey: null, completedAt: null },
+              { systemKey: { not: null } },
+            ],
+          },
+          orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
+        },
       },
       orderBy: [{ eta: "asc" }, { bearbeitenBis: "asc" }, { createdAt: "desc" }],
     });
@@ -108,6 +134,25 @@ export default async function Home({
   const dueToday = deals.filter((deal) => daysUntil(deal.bearbeitenBis) === 0);
   const missingEta = deals.filter((deal) => !deal.eta && !deal.etaUnbekannt);
   const poReminders = buildPoReminders(deals);
+  const dealReminders: DealReminderPopupItem[] = deals.flatMap((deal) =>
+    deal.reminders.filter((reminder) => reminder.systemKey === null).map((reminder) => ({
+      id: reminder.id,
+      dealId: deal.id,
+      dealLabel: `${deal.marke || deal.kunde} · ${deal.artikel}`,
+      text: reminder.text,
+      dueDate: dateKey(reminder.dueDate),
+      snoozedUntil: reminder.snoozedUntil?.toISOString() ?? null,
+    })),
+  );
+  const poReminderItems: PoReminderPopupItem[] = poReminders.map((reminder) => ({
+    id: reminder.id,
+    dealId: reminder.deal.id,
+    dealLabel: `${reminder.deal.marke || reminder.deal.kunde} · ${reminder.deal.artikel}`,
+    title: reminder.title,
+    detail: reminder.detail,
+    dueDate: dateKey(reminder.date),
+    snoozedUntil: reminder.snoozedUntil?.toISOString() ?? null,
+  }));
 
   return (
     <main className="min-h-screen bg-[#f4efe7] text-[#2a241d]">
@@ -197,7 +242,7 @@ export default async function Home({
           />
         )}
       </div>
-      <ReminderPopup reminders={poReminders} />
+      <ReminderPopups poReminders={poReminderItems} dealReminders={dealReminders} />
     </main>
   );
 }
@@ -288,7 +333,12 @@ function DealsView({
     <section className="rounded-lg border border-[#e4ddd2] bg-[#fffdf8]">
       <PanelHeader icon={<ClipboardList size={18} />} title="Deal-Übersicht" detail={`${deals.length} von ${allDeals.length} Deals`} />
       <Filters params={params} />
-      <CompactDealTable deals={sortByAusmusterung(deals)} empty="Keine Deals für diese Filter." showDetails={!embedded} />
+      <CompactDealTable
+        deals={sortByAusmusterung(deals)}
+        empty="Keine Deals für diese Filter."
+        showDetails={!embedded}
+        openDealId={params.deal}
+      />
     </section>
   );
 }
@@ -301,7 +351,11 @@ function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: S
   return (
     <section className="rounded-lg border border-[#e4ddd2] bg-[#fffdf8]">
       <div className="flex flex-col gap-3 border-b border-[#e4ddd2] p-4 lg:flex-row lg:items-center lg:justify-between">
-        <PanelTitle icon={<CalendarClock size={18} />} title="Kalender" detail="ETD, ETA und interne Bearbeitungsfristen" />
+        <PanelTitle
+          icon={<CalendarClock size={18} />}
+          title="Kalender"
+          detail="ETD, ETA, interne Bearbeitungsfristen und individuelle Erinnerungen"
+        />
         <div className="flex items-center gap-2">
           <Link href={`/?tab=kalender&month=${shiftMonth(month, -1)}`} className="rounded-md border border-[#e4ddd2] px-3 py-2 text-sm font-medium">
             Zurück
@@ -331,8 +385,8 @@ function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: S
               <div className="text-sm font-semibold">{day.getDate()}</div>
               <div className="mt-2 space-y-1">
                 {dayEvents.slice(0, 4).map((event) => (
-                  <div key={`${event.type}-${event.deal.id}`} className={clsx("rounded px-2 py-1 text-xs font-medium", calendarEventClass(event.light))}>
-                    <span className="font-semibold">{event.type}</span> · {event.deal.kunde} · {event.deal.artikel}
+                  <div key={event.id} className={clsx("rounded px-2 py-1 text-xs font-medium", calendarEventClass(event.light))}>
+                    <span className="font-semibold">{event.type}</span> · {event.deal.kunde} · {event.detail ?? event.deal.artikel}
                   </div>
                 ))}
                 {dayEvents.length > 4 ? <p className="text-xs text-[#746d63]">+{dayEvents.length - 4} weitere</p> : null}
@@ -411,10 +465,12 @@ function CompactDealTable({
   deals,
   empty,
   showDetails = true,
+  openDealId,
 }: {
   deals: DealWithRelations[];
   empty: string;
   showDetails?: boolean;
+  openDealId?: string;
 }) {
   if (deals.length === 0) {
     return <p className="p-5 text-sm text-[#746d63]">{empty}</p>;
@@ -441,6 +497,7 @@ function CompactDealTable({
               <Fragment key={deal.id}>
                 <tr
                   key={`${deal.id}-summary`}
+                  id={`deal-${deal.id}`}
                   className={clsx(
                     "align-top hover:bg-[#fffdf8]",
                     light !== "green" && "crm-soft-pulse",
@@ -491,7 +548,7 @@ function CompactDealTable({
                 {showDetails ? (
                   <tr key={`${deal.id}-details`} className="bg-[#fffdf8]">
                     <td colSpan={7} className="px-3 pb-5">
-                      <DealDetails deal={deal} />
+                      <DealDetails deal={deal} open={openDealId === deal.id} />
                     </td>
                   </tr>
                 ) : null}
@@ -530,9 +587,9 @@ function PoOverview({ deal }: { deal: Deal }) {
   );
 }
 
-function DealDetails({ deal }: { deal: DealWithRelations }) {
+function DealDetails({ deal, open = false }: { deal: DealWithRelations; open?: boolean }) {
   return (
-    <details className="group">
+    <details className="group" open={open}>
       <summary className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#5b554d] group-open:hidden">
         <Pencil size={15} /> Details
       </summary>
@@ -543,6 +600,7 @@ function DealDetails({ deal }: { deal: DealWithRelations }) {
         </div>
         <div className="space-y-4">
           <DocumentStatusGrid deal={deal} />
+          <DealReminderPanel deal={deal} />
           <NotesPanel deal={deal} />
           <ChangeHistory changes={deal.changes} />
           <form action={deleteDeal.bind(null, deal.id)}>
@@ -786,31 +844,78 @@ function ReminderPanel({ reminders }: { reminders: PoReminder[] }) {
   );
 }
 
-function ReminderPopup({ reminders }: { reminders: PoReminder[] }) {
-  if (reminders.length === 0) return null;
+function ReminderPopups({
+  poReminders,
+  dealReminders,
+}: {
+  poReminders: PoReminderPopupItem[];
+  dealReminders: DealReminderPopupItem[];
+}) {
+  if (poReminders.length === 0 && dealReminders.length === 0) return null;
 
   return (
-    <aside className="fixed bottom-5 left-5 z-30 w-[min(360px,calc(100vw-2.5rem))] rounded-lg border border-[#e4ddd2] bg-[#fffdf8] p-4 shadow-xl">
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-amber-50 text-amber-700">
-          <BellRing size={18} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-[#2a241d]">Erinnerungen</p>
-          <p className="mt-1 text-sm text-[#746d63]">
-            {reminders.length} PO-Termin{reminders.length === 1 ? "" : "e"} brauchen Aufmerksamkeit.
-          </p>
-        </div>
-      </div>
+    <div className="fixed bottom-5 left-5 z-30 flex max-h-[calc(100vh-2.5rem)] w-[min(380px,calc(100vw-2.5rem))] flex-col gap-3 overflow-y-auto">
+      <DealReminderPopup reminders={dealReminders} />
+      <PoReminderPopup reminders={poReminders} />
+    </div>
+  );
+}
+
+function DealReminderPanel({ deal }: { deal: DealWithRelations }) {
+  const reminders = deal.reminders.filter((reminder) => reminder.systemKey === null);
+
+  return (
+    <section className="rounded-md border border-[#e4ddd2] bg-[#faf8f3] p-3">
+      <SectionTitle icon={<BellRing size={16} />} title="Individuelle Erinnerungen" />
+      <form action={createDealReminder.bind(null, deal.id)} className="mt-3 grid gap-2">
+        <label className="grid gap-1 text-sm font-medium text-[#5b554d]">
+          Fällig am
+          <input
+            type="date"
+            name="dueDate"
+            required
+            className="h-10 rounded-md border border-[#e4ddd2] bg-[#fffdf8] px-3 text-sm outline-none focus:border-[#6f7d4b]"
+          />
+        </label>
+        <label className="grid gap-1 text-sm font-medium text-[#5b554d]">
+          Erinnerung
+          <textarea
+            name="text"
+            required
+            rows={3}
+            placeholder="Woran soll erinnert werden?"
+            className="resize-y rounded-md border border-[#e4ddd2] bg-[#fffdf8] px-3 py-2 text-sm outline-none focus:border-[#6f7d4b]"
+          />
+        </label>
+        <button
+          type="submit"
+          className="h-10 rounded-md bg-[#4f6138] px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#41522e]"
+        >
+          Erinnerung anlegen
+        </button>
+      </form>
+
       <div className="mt-3 space-y-2">
-        {reminders.slice(0, 3).map((reminder) => (
-          <div key={reminder.id} className="rounded-md bg-[#faf8f3] px-3 py-2 text-sm">
-            <p className="font-semibold">{reminder.title}</p>
-            <p className="mt-1 text-xs text-[#746d63]">{reminder.deal.kunde} · {reminder.deal.artikel} · {relativeDate(reminder.date)}</p>
-          </div>
-        ))}
+        {reminders.length === 0 ? (
+          <p className="text-sm text-[#746d63]">Noch keine offene Erinnerung.</p>
+        ) : (
+          reminders.map((reminder) => (
+            <div key={reminder.id} className="rounded-md bg-[#fffdf8] p-3">
+              <p className="text-sm font-semibold text-[#2a241d]">{reminder.text}</p>
+              <p className="mt-1 text-xs text-[#746d63]">
+                Fällig am {formatDate(reminder.dueDate)}
+                {reminder.snoozedUntil ? ` · pausiert bis ${formatDateTime(reminder.snoozedUntil)}` : ""}
+              </p>
+              <form action={completeDealReminder.bind(null, reminder.id)} className="mt-2">
+                <button type="submit" className="text-xs font-semibold text-emerald-700">
+                  Als erledigt markieren
+                </button>
+              </form>
+            </div>
+          ))
+        )}
       </div>
-    </aside>
+    </section>
   );
 }
 
@@ -1048,6 +1153,7 @@ function normalizeSearchParams(params?: Record<string, string | string[] | undef
     month: value("month"),
     preset: value("preset"),
     newDeal: value("new"),
+    deal: value("deal"),
   };
 }
 
@@ -1164,6 +1270,17 @@ function relativeDate(value?: Date | null) {
   return `in ${diff} Tagen`;
 }
 
+function formatDateTime(value: Date) {
+  return value.toLocaleString("de-DE", {
+    timeZone: "Europe/Berlin",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function signalForDate(label: string, value?: Date | null) {
   const diff = daysUntil(value);
   if (diff === null) return null;
@@ -1267,7 +1384,7 @@ function buildPoReminders(deals: DealWithRelations[]) {
       const etdDays = daysUntil(po.etd);
       if (po.etd && etdDays !== null && etdDays >= 0 && etdDays <= 3) {
         reminders.push({
-          id: `${deal.id}-${po.key}-etd`,
+          id: `${deal.id}-${po.key}-etd-${dateKey(po.etd)}`,
           deal,
           title: `ETD ${po.label}`,
           detail: `PO ${po.number}: ETD am ${formatDate(po.etd)} prüfen und Verschiffung absichern.`,
@@ -1283,7 +1400,7 @@ function buildPoReminders(deals: DealWithRelations[]) {
 
       if (etaDays <= 14) {
         reminders.push({
-          id: `${deal.id}-${po.key}-customs`,
+          id: `${deal.id}-${po.key}-customs-${dateKey(po.eta)}`,
           deal,
           title: `Verzollung ${po.label}`,
           detail: `PO ${po.number}: Verzollung für die aktuelle ETA ${formatDate(po.eta)} vorbereiten.`,
@@ -1299,7 +1416,7 @@ function buildPoReminders(deals: DealWithRelations[]) {
 
       if (etaDays <= 3 && !h1T1Complete) {
         reminders.push({
-          id: `${deal.id}-${po.key}-h1-t1`,
+          id: `${deal.id}-${po.key}-h1-t1-${dateKey(po.eta)}`,
           deal,
           title: `H1 + T1 ${po.label}`,
           detail: `PO ${po.number}: H1- und T1-Dokument für ETA ${formatDate(po.eta)} prüfen.`,
@@ -1311,20 +1428,42 @@ function buildPoReminders(deals: DealWithRelations[]) {
     }
   }
 
-  return reminders.sort((a, b) => a.days - b.days || a.date.getTime() - b.date.getTime());
+  return reminders
+    .flatMap((reminder) => {
+      const state = reminder.deal.reminders.find((entry) => entry.systemKey === reminder.id);
+      if (state?.completedAt) return [];
+      return [{ ...reminder, snoozedUntil: state?.snoozedUntil ?? null }];
+    })
+    .sort((a, b) => a.days - b.days || a.date.getTime() - b.date.getTime());
 }
 
 function buildEvents(deals: DealWithRelations[]) {
   return deals.flatMap((deal) => {
     const light = getTrafficLight(deal);
     const poEvents = getPoSchedules(deal).flatMap((po) => [
-      po.number && po.etd ? { key: dateKey(po.etd), type: `${po.shortLabel} ETD`, deal, light } : null,
-      po.number && po.eta ? { key: dateKey(po.eta), type: `${po.shortLabel} ETA`, deal, light } : null,
+      po.number && po.etd ? { id: `${deal.id}-${po.key}-etd`, key: dateKey(po.etd), type: `${po.shortLabel} ETD`, deal, light } : null,
+      po.number && po.eta ? { id: `${deal.id}-${po.key}-eta`, key: dateKey(po.eta), type: `${po.shortLabel} ETA`, deal, light } : null,
     ]);
+    const reminderEvents = deal.reminders.filter((reminder) => reminder.systemKey === null).map((reminder) => ({
+      id: `reminder-${reminder.id}`,
+      key: dateKey(reminder.dueDate),
+      type: "Erinnerung",
+      detail: reminder.text,
+      deal,
+      light: "yellow" as const,
+    }));
     return [
       ...poEvents,
-      deal.bearbeitenBis ? { key: dateKey(deal.bearbeitenBis), type: "To-do", deal, light } : null,
-    ].filter(Boolean) as { key: string; type: string; deal: DealWithRelations; light: "green" | "yellow" | "red" }[];
+      ...reminderEvents,
+      deal.bearbeitenBis ? { id: `${deal.id}-todo`, key: dateKey(deal.bearbeitenBis), type: "To-do", deal, light } : null,
+    ].filter(Boolean) as {
+      id: string;
+      key: string;
+      type: string;
+      detail?: string;
+      deal: DealWithRelations;
+      light: "green" | "yellow" | "red";
+    }[];
   });
 }
 
