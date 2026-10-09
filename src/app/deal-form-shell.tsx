@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
 import { isHartmannCustomer } from "@/lib/customers";
 
 export function DealFormShell({
@@ -39,5 +39,27 @@ export function DealFormShell({
     >
       {children}
     </form>
+  );
+}
+
+export function DealCollapseButton() {
+  function collapseDeal(event: MouseEvent<HTMLButtonElement>) {
+    const details = event.currentTarget.closest("details");
+    if (!(details instanceof HTMLDetailsElement)) return;
+
+    details.open = false;
+    window.requestAnimationFrame(() => {
+      details.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={collapseDeal}
+      className="h-11 rounded-md border border-[#4f6138] bg-[#fffdf8] px-4 text-sm font-semibold text-[#4f6138] shadow-sm transition-colors hover:bg-[#f3eee6]"
+    >
+      Deal zuklappen
+    </button>
   );
 }

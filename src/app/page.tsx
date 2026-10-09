@@ -38,7 +38,7 @@ import {
   type DealReminderPopupItem,
   type PoReminderPopupItem,
 } from "@/app/deal-reminder-popup";
-import { DealFormShell } from "@/app/deal-form-shell";
+import { DealCollapseButton, DealFormShell } from "@/app/deal-form-shell";
 import { PoCompletionCheckbox } from "@/app/po-completion-checkbox";
 import {
   daysUntil,
@@ -800,9 +800,12 @@ function DealForm({
         <Textarea name="notizenKurz" label="Aktueller Status / allgemeine Notizen" defaultValue={deal?.notizenKurz} />
       </div>
 
-      <button className="h-11 rounded-md bg-[#4f6138] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#41522e]" type="submit">
-        {submitLabel}
-      </button>
+      <div className={clsx("grid gap-3", deal && "sm:grid-cols-2")}>
+        <button className="h-11 rounded-md bg-[#4f6138] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#41522e]" type="submit">
+          {submitLabel}
+        </button>
+        {deal ? <DealCollapseButton /> : null}
+      </div>
     </DealFormShell>
   );
 }
