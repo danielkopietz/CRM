@@ -29,10 +29,20 @@ export function DealFormShell({
     }
   }
 
+  async function handleSubmit(formData: FormData) {
+    const details = formRef.current?.closest("details");
+    await action(formData);
+
+    if (details instanceof HTMLDetailsElement) {
+      details.open = false;
+      details.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
   return (
     <form
       ref={formRef}
-      action={action}
+      action={handleSubmit}
       onChange={handleChange}
       data-hartmann={hartmann ? "true" : "false"}
       className="deal-form mt-4 grid gap-4"
