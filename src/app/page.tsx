@@ -38,7 +38,6 @@ import {
   type DealReminderPopupItem,
   type PoReminderPopupItem,
 } from "@/app/deal-reminder-popup";
-import { DealDetailsShell } from "@/app/deal-details-shell";
 import { DealFormShell } from "@/app/deal-form-shell";
 import { PoCompletionCheckbox } from "@/app/po-completion-checkbox";
 import {
@@ -335,6 +334,8 @@ function DealsView({
   params: Search;
   embedded?: boolean;
 }) {
+  const returnPath = dealsReturnPath(params);
+
   return (
     <section className="rounded-lg border border-[#e4ddd2] bg-[#fffdf8]">
       <PanelHeader icon={<ClipboardList size={18} />} title="Deal-Übersicht" detail={`${deals.length} von ${allDeals.length} Deals`} />
@@ -344,6 +345,7 @@ function DealsView({
         empty="Keine Deals für diese Filter."
         showDetails={!embedded}
         openDealId={params.deal}
+        detailsReturnPath={returnPath}
       />
     </section>
   );
@@ -472,11 +474,13 @@ function CompactDealTable({
   empty,
   showDetails = true,
   openDealId,
+  detailsReturnPath = "/?tab=deals",
 }: {
   deals: DealWithRelations[];
   empty: string;
   showDetails?: boolean;
   openDealId?: string;
+  detailsReturnPath?: string;
 }) {
   if (deals.length === 0) {
     return <p className="p-5 text-sm text-[#746d63]">{empty}</p>;
@@ -569,7 +573,7 @@ function CompactDealTable({
                 {showDetails ? (
                   <tr key={`${deal.id}-details`} className="bg-[#fffdf8]">
                     <td colSpan={7} className="px-3 pb-5">
-                      <DealDetails deal={deal} open={openDealId === deal.id} />
+                      <DealDetails deal={deal} open={openDealId === deal.id} returnPath={detailsReturnPath} />
                     </td>
                   </tr>
                 ) : null}
@@ -610,16 +614,24 @@ function PoOverview({ deal }: { deal: Deal }) {
   );
 }
 
-function DealDetails({ deal, open = false }: { deal: DealWithRelations; open?: boolean }) {
+function DealDetails({
+  deal,
+  open = false,
+  returnPath,
+}: {
+  deal: DealWithRelations;
+  open?: boolean;
+  returnPath: string;
+}) {
   return (
-    <DealDetailsShell key={open ? "open" : "closed"} initiallyOpen={open}>
+    <details className="group" open={open}>
       <summary className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#5b554d] group-open:hidden">
         <Pencil size={15} /> Details
       </summary>
       <div className="mt-3 grid w-full gap-4 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] p-4 shadow-sm xl:grid-cols-[minmax(0,1fr)_340px]">
         <div>
           <SectionTitle icon={<Pencil size={17} />} title="Deal bearbeiten" />
-          <DealForm action={updateDeal.bind(null, deal.id)} deal={deal} submitLabel="Änderungen speichern" />
+          <DealForm action={updateDeal.bind(null, deal.id, returnPath)} deal={deal} submitLabel="Änderungen speichern" />
         </div>
         <div className="space-y-4">
           {isHartmannCustomer(deal.kunde) ? null : <DocumentStatusGrid deal={deal} />}
@@ -646,7 +658,7 @@ function DealDetails({ deal, open = false }: { deal: DealWithRelations; open?: b
           </div>
         </div>
       </div>
-    </DealDetailsShell>
+    </details>
   );
 }
 
@@ -1230,6 +1242,17 @@ function normalizeSearchParams(params?: Record<string, string | string[] | undef
     newDeal: value("new"),
     deal: value("deal"),
   };
+}
+
+function dealsReturnPath(params: Search) {
+  const search = new URLSearchParams({ tab: "deals" });
+
+  for (const key of ["q", "kunde", "status", "ampel", "preset"] as const) {
+    const value = params[key];
+    if (value) search.set(key, value);
+  }
+
+  return `/?${search.toString()}`;
 }
 
 function filterDeals(deals: DealWithRelations[], params: Search) {

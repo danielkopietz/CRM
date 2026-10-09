@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { useCloseDealDetails } from "@/app/deal-details-shell";
 import { isHartmannCustomer } from "@/lib/customers";
 
 export function DealFormShell({
@@ -15,7 +14,6 @@ export function DealFormShell({
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [hartmann, setHartmann] = useState(() => isHartmannCustomer(defaultCustomer));
-  const closeDealDetails = useCloseDealDetails();
 
   useEffect(() => {
     for (const name of ["liefertermin", "po"]) {
@@ -31,15 +29,10 @@ export function DealFormShell({
     }
   }
 
-  async function handleSubmit(formData: FormData) {
-    await action(formData);
-    closeDealDetails?.();
-  }
-
   return (
     <form
       ref={formRef}
-      action={handleSubmit}
+      action={action}
       onChange={handleChange}
       data-hartmann={hartmann ? "true" : "false"}
       className="deal-form mt-4 grid gap-4"

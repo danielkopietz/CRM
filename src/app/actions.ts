@@ -110,7 +110,7 @@ export async function createDeal(formData: FormData) {
   revalidatePath("/");
 }
 
-export async function updateDeal(id: string, formData: FormData) {
+export async function updateDeal(id: string, returnPath: string, formData: FormData) {
   await requireUser();
   const user = await getSessionUser();
   const previous = await prisma.deal.findUnique({ where: { id } });
@@ -160,6 +160,25 @@ export async function updateDeal(id: string, formData: FormData) {
   }
 
   revalidatePath("/");
+  redirect(dealReturnPath(returnPath, id));
+}
+
+function dealReturnPath(returnPath: string, dealId: string) {
+  const search = new URLSearchParams({ tab: "deals" });
+
+  try {
+    const url = new URL(returnPath, "https://crm.local");
+    if (url.origin === "https://crm.local" && url.pathname === "/") {
+      for (const key of ["q", "kunde", "status", "ampel", "preset"] as const) {
+        const value = url.searchParams.get(key);
+        if (value) search.set(key, value);
+      }
+    }
+  } catch {
+    // Bei einem ungültigen Rücksprungziel wird die normale Deal-Übersicht verwendet.
+  }
+
+  return `/?${search.toString()}#deal-${encodeURIComponent(dealId)}`;
 }
 
 export async function deleteDeal(id: string) {
