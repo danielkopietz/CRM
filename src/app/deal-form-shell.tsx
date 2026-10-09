@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCloseDealDetails } from "@/app/deal-details-shell";
 import { isHartmannCustomer } from "@/lib/customers";
 
 export function DealFormShell({
@@ -14,6 +15,7 @@ export function DealFormShell({
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [hartmann, setHartmann] = useState(() => isHartmannCustomer(defaultCustomer));
+  const closeDealDetails = useCloseDealDetails();
 
   useEffect(() => {
     for (const name of ["liefertermin", "po"]) {
@@ -30,13 +32,8 @@ export function DealFormShell({
   }
 
   async function handleSubmit(formData: FormData) {
-    const details = formRef.current?.closest("details");
     await action(formData);
-
-    if (details instanceof HTMLDetailsElement) {
-      details.open = false;
-      details.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
+    closeDealDetails?.();
   }
 
   return (

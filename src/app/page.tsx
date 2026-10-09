@@ -38,6 +38,7 @@ import {
   type DealReminderPopupItem,
   type PoReminderPopupItem,
 } from "@/app/deal-reminder-popup";
+import { DealDetailsShell } from "@/app/deal-details-shell";
 import { DealFormShell } from "@/app/deal-form-shell";
 import { PoCompletionCheckbox } from "@/app/po-completion-checkbox";
 import {
@@ -611,7 +612,7 @@ function PoOverview({ deal }: { deal: Deal }) {
 
 function DealDetails({ deal, open = false }: { deal: DealWithRelations; open?: boolean }) {
   return (
-    <details className="group" open={open}>
+    <DealDetailsShell key={open ? "open" : "closed"} initiallyOpen={open}>
       <summary className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#e4ddd2] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#5b554d] group-open:hidden">
         <Pencil size={15} /> Details
       </summary>
@@ -645,7 +646,7 @@ function DealDetails({ deal, open = false }: { deal: DealWithRelations; open?: b
           </div>
         </div>
       </div>
-    </details>
+    </DealDetailsShell>
   );
 }
 
