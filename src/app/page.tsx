@@ -40,6 +40,8 @@ import {
 } from "@/app/deal-reminder-popup";
 import { DealCollapseButton, DealFormShell } from "@/app/deal-form-shell";
 import { PoCompletionCheckbox } from "@/app/po-completion-checkbox";
+import { WeekDateInput } from "@/app/week-date-input";
+import { formatIsoWeek } from "@/lib/calendar-week";
 import {
   daysUntil,
   dealStatuses,
@@ -354,6 +356,7 @@ function DealsView({
 function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: Search }) {
   const month = parseMonth(params.month);
   const days = buildCalendarDays(month);
+  const weeks = Array.from({ length: 6 }, (_, index) => days.slice(index * 7, index * 7 + 7));
   const events = buildEvents(deals);
 
   return (
@@ -376,32 +379,40 @@ function CalendarView({ deals, params }: { deals: DealWithRelations[]; params: S
           </Link>
         </div>
       </div>
-      <div className="grid grid-cols-7 border-b border-[#e4ddd2] bg-[#faf8f3] text-xs font-semibold uppercase text-[#746d63]">
+      <div className="grid grid-cols-[60px_repeat(7,minmax(0,1fr))] border-b border-[#e4ddd2] bg-[#faf8f3] text-xs font-semibold uppercase text-[#746d63]">
+        <div className="border-r border-[#eee7dc] px-3 py-2 text-[#7a284f]">KW</div>
         {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((day) => (
           <div key={day} className="border-r border-[#eee7dc] px-3 py-2 last:border-r-0">
             {day}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7">
-        {days.map((day) => {
-          const key = dateKey(day);
-          const dayEvents = events.filter((event) => event.key === key);
-          const outside = day.getMonth() !== month.getMonth();
-          return (
-            <div key={key} className={clsx("min-h-36 border-b border-r border-[#eee7dc] p-2 last:border-r-0", outside && "bg-[#fffdf8] text-[#9aa6b5]")}>
-              <div className="text-sm font-semibold">{day.getDate()}</div>
-              <div className="mt-2 space-y-1">
-                {dayEvents.slice(0, 4).map((event) => (
-                  <div key={event.id} className={clsx("rounded px-2 py-1 text-xs font-medium", calendarEventClass(event.light))}>
-                    <span className="font-semibold">{event.type}</span> · {event.deal.kunde} · {event.detail ?? event.deal.artikel}
-                  </div>
-                ))}
-                {dayEvents.length > 4 ? <p className="text-xs text-[#746d63]">+{dayEvents.length - 4} weitere</p> : null}
-              </div>
+      <div className="grid grid-cols-[60px_repeat(7,minmax(0,1fr))]">
+        {weeks.map((week) => (
+          <Fragment key={dateKey(week[0])}>
+            <div className="flex min-h-36 items-start justify-center border-r border-b border-[#eee7dc] bg-[#faf8f3] px-2 py-3 text-sm font-semibold text-[#7a284f]">
+              KW {formatIsoWeek(week[0])}
             </div>
-          );
-        })}
+            {week.map((day) => {
+              const key = dateKey(day);
+              const dayEvents = events.filter((event) => event.key === key);
+              const outside = day.getMonth() !== month.getMonth();
+              return (
+                <div key={key} className={clsx("min-h-36 border-r border-b border-[#eee7dc] p-2 last:border-r-0", outside && "bg-[#fffdf8] text-[#9aa6b5]")}>
+                  <div className="text-sm font-semibold">{day.getDate()}</div>
+                  <div className="mt-2 space-y-1">
+                    {dayEvents.slice(0, 4).map((event) => (
+                      <div key={event.id} className={clsx("rounded px-2 py-1 text-xs font-medium", calendarEventClass(event.light))}>
+                        <span className="font-semibold">{event.type}</span> · {event.deal.kunde} · {event.detail ?? event.deal.artikel}
+                      </div>
+                    ))}
+                    {dayEvents.length > 4 ? <p className="text-xs text-[#746d63]">+{dayEvents.length - 4} weitere</p> : null}
+                  </div>
+                </div>
+              );
+            })}
+          </Fragment>
+        ))}
       </div>
     </section>
   );
@@ -936,15 +947,10 @@ function DealReminderPanel({ deal }: { deal: DealWithRelations }) {
     <section className="rounded-md border border-[#e4ddd2] bg-[#faf8f3] p-3">
       <SectionTitle icon={<BellRing size={16} />} title="Individuelle Erinnerungen" />
       <form action={createDealReminder.bind(null, deal.id)} className="mt-3 grid gap-2">
-        <label className="grid gap-1 text-sm font-medium text-[#5b554d]">
-          Fällig am
-          <input
-            type="date"
-            name="dueDate"
-            required
-            className="h-10 rounded-md border border-[#e4ddd2] bg-[#fffdf8] px-3 text-sm outline-none focus:border-[#6f7d4b]"
-          />
-        </label>
+        <div className="grid gap-1 text-sm font-medium text-[#5b554d]">
+          <span>Fällig am</span>
+          <WeekDateInput name="dueDate" required ariaLabel="Fällig am" />
+        </div>
         <label className="grid gap-1 text-sm font-medium text-[#5b554d]">
           Erinnerung
           <textarea
@@ -1165,6 +1171,15 @@ function Field({
   required?: boolean;
   className?: string;
 }) {
+  if (type === "date") {
+    return (
+      <div className={clsx("grid gap-1 text-sm font-medium text-[#5b554d]", className)}>
+        <span>{label}</span>
+        <WeekDateInput name={name} defaultValue={defaultValue} required={required} ariaLabel={label} />
+      </div>
+    );
+  }
+
   return (
     <label className={clsx("grid gap-1 text-sm font-medium text-[#5b554d]", className)}>
       {label}
